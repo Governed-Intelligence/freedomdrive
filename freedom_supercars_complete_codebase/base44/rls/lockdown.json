@@ -1,0 +1,75 @@
+{
+  "_comment": "Row-level security to apply to the FreedomDRIVE Base44 app (app id 6ab5bac131b677eb0a191b2d) once fs-gateway is deployed. Backend functions run asServiceRole and bypass these rules; browsers cannot. Apply each block with the Base44 MCP tool update_entity_schema (Builder plan) or by adding the same 'rls' key to base44/entities/<entity>.jsonc and running `npx base44 entities push`.",
+
+  "Reservation": {
+    "rls": {
+      "read": { "$or": [ { "data.member_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } } ] },
+      "create": { "user_condition": { "role": "admin" } },
+      "update": { "user_condition": { "role": "admin" } },
+      "delete": { "user_condition": { "role": "admin" } }
+    },
+    "_why": "Members see only their own trips. Nobody creates or edits a reservation from the browser; fs-gateway does it after the API accepts the booking."
+  },
+
+  "PointsLedger": {
+    "rls": {
+      "read": { "$or": [ { "data.member_email": "{{user.email}}" }, { "user_condition": { "role": "admin" } } ] },
+      "create": { "user_condition": { "role": "admin" } },
+      "update": { "user_condition": { "role": "admin" } },
+      "delete": { "user_condition": { "role": "admin" } }
+    },
+    "_why": "Append-only in spirit: the browser never writes ledger rows; balances are derived, never edited."
+  },
+
+  "ServiceBlock": {
+    "rls": {
+      "read": { "user_condition": { "role": "admin" } },
+      "create": { "user_condition": { "role": "admin" } },
+      "update": { "user_condition": { "role": "admin" } },
+      "delete": { "user_condition": { "role": "admin" } }
+    },
+    "_why": "Operational data. Staff pages read it; scheduling goes through the scheduleService function."
+  },
+
+  "Inspection": {
+    "rls": {
+      "read": { "user_condition": { "role": "admin" } },
+      "create": { "user_condition": { "role": "admin" } },
+      "update": { "user_condition": { "role": "admin" } },
+      "delete": { "user_condition": { "role": "admin" } }
+    },
+    "_why": "Voice and typed inspections are submitted through fs-gateway op submit_inspection, which stamps the technician and posts pickup/return state to the API."
+  },
+
+  "Member": {
+    "rls": {
+      "read": { "$or": [ { "data.email": "{{user.email}}" }, { "user_condition": { "role": "admin" } } ] },
+      "create": { "user_condition": { "role": "admin" } },
+      "update": { "user_condition": { "role": "admin" } },
+      "delete": { "user_condition": { "role": "admin" } }
+    },
+    "_why": "A member can read their own profile; edits go through the profile function so license and insurance changes are audited."
+  },
+
+  "Vehicle": {
+    "rls": {
+      "create": { "user_condition": { "role": "admin" } },
+      "update": { "user_condition": { "role": "admin" } },
+      "delete": { "user_condition": { "role": "admin" } }
+    },
+    "_why": "Catalog is readable by everyone signed in; only admins change it. Condition state changes should route through the state-machine function, which is enforced by the API on pickup/return."
+  },
+
+  "_schema_additions": {
+    "Member": { "fs_member_id": { "type": "string", "description": "Freedom Supercars API member id (cached by fs-gateway)" } },
+    "Reservation": { "fs_reservation_id": { "type": "string", "description": "Freedom Supercars API reservation id" } },
+    "Inspection": {
+      "phase": { "type": "string", "enum": ["general", "pickup", "return", "service"], "default": "general" },
+      "findings": { "type": "array", "items": { "type": "object", "properties": { "area": { "type": "string" }, "description": { "type": "string" }, "severity": { "type": "string", "enum": ["Severe", "Moderate", "Minor", "Note"] } } } },
+      "overall_condition": { "type": "string", "enum": ["excellent", "good", "fair", "needs_attention", "out_of_service"] },
+      "dictation": { "type": "string" },
+      "technician": { "type": "string", "format": "email" },
+      "submitted_at": { "type": "string", "format": "date-time" }
+    }
+  }
+}

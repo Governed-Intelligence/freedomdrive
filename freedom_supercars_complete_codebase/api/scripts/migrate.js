@@ -26,9 +26,7 @@ if (!DATABASE_URL) {
 }
 
 function sha256(input) {
-  // Normalize CRLF to LF so line ending variance between Windows git checkout and Linux container does not alter checksums
-  const normalized = typeof input === 'string' ? input.replace(/\r\n/g, '\n') : input;
-  return createHash('sha256').update(normalized).digest('hex');
+  return createHash('sha256').update(input).digest('hex');
 }
 
 async function ensureMigrationsTable(client) {
@@ -57,16 +55,16 @@ async function loadMigrationFiles() {
   return entries.filter((f) => f.endsWith('.sql')).sort();
 }
 
-async function alreadyApplied(client, filename, validChecksums) {
+async function alreadyApplied(client, filename, checksum) {
   const res = await client.query(
     'SELECT checksum FROM public._migrations WHERE filename = $1',
     [filename]
   );
   if (res.rowCount === 0) return false;
   const existing = res.rows[0].checksum;
-  if (!validChecksums.includes(existing)) {
+  if (existing !== checksum) {
     throw new Error(
-      `Checksum mismatch for ${filename}: applied=${existing.slice(0, 10)}... current=${validChecksums[0].slice(0, 10)}... Migrations are immutable once applied.`
+      `Checksum mismatch for ${filename}: applied=${existing.slice(0, 10)}... current=${checksum.slice(0, 10)}... Migrations are immutable once applied.`
     );
   }
   return true;
@@ -75,17 +73,9 @@ async function alreadyApplied(client, filename, validChecksums) {
 async function applyOne(client, filename) {
   const fullPath = join(MIGRATIONS_DIR, filename);
   const sql = await readFile(fullPath, 'utf8');
+  const checksum = sha256(sql);
 
-  // Tolerate both LF and CRLF line ending hashes historically stored across Windows/Linux runs
-  const normalizedLF = sql.replace(/\r\n/g, '\n');
-  const normalizedCRLF = normalizedLF.replace(/\n/g, '\r\n');
-  const checksumLF = createHash('sha256').update(normalizedLF).digest('hex');
-  const checksumCRLF = createHash('sha256').update(normalizedCRLF).digest('hex');
-  const checksumRaw = createHash('sha256').update(sql).digest('hex');
-  const validChecksums = [checksumLF, checksumCRLF, checksumRaw];
-  const checksum = checksumLF;
-
-  if (await alreadyApplied(client, filename, validChecksums)) {
+  if (await alreadyApplied(client, filename, checksum)) {
     console.log(`✓ ${filename}  (already applied)`);
     return;
   }

@@ -1,0 +1,660 @@
+{
+  "guide_id": "10.1",
+  "chapter_no": 10,
+  "part_no": 3,
+  "title": "Trip Creation, Custody, and Completion",
+  "page_start": 110,
+  "page_end": 116,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 3 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 10, section HOW TRIPS ARE RECORDED",
+  "tables_referenced": [
+    "MEMBER_PACKAGE_RATE",
+    "STAFF",
+    "VEHICLE_EVENT_LOG",
+    "VEHICLE_FUEL_LEVEL_SELECT",
+    "VEHICLE_ODOMETER_LOG",
+    "VEHICLE_RESERVATION",
+    "VEHICLE_TRIP",
+    "VEHICLE_TRIP_MEMBER",
+    "VEHICLE_TRIP_SERVICE",
+    "VEHICLE_TRIP_TYPE_SELECT"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "A reservation is a promise about the future. A trip is what actually happened. When a member drives\naway, the reservation\u2019s job is done and the trip takes over: when the car really left, who really had it,\nhow far it really went, and what state it came back in.\nThis guide covers the trip record from checkout to check-in, the split between the shared trip facts and\nthe member-specific ones, and the odometer readings that anchor everything measured in miles.\nThe structural decision worth understanding: a trip has a core record shared by every kind of use, and\na companion record for the kind it is. A member trip and a service run are both trips, and only one of\nthem has points and a package.\nPairs with How It Works chapter 10, section HOW TRIPS ARE RECORDED.",
+    "schema_overview": "TABLES USED BY THIS GUIDE\n\nTable                             Role in this guide\n\nVEHICLE_TRIP                      The core record: when, which car, how far, what fuel.\n\nVEHICLE_TRIP_MEMBER               The member companion: package, participant, points, and snapshots.\n\nVEHICLE_TRIP_SERVICE              The service companion: vendor, category, cost, and billing.\n\nVEHICLE_ODOMETER_LOG              Every reading captured, whatever workflow captured it.\n\nVEHICLE_EVENT_LOG                 Checkout, check-in, refuel, and damage events.\n\nVEHICLE_RESERVATION               The reservation the trip came from.\n\n\n\n\nKEY COLUMNS ON VEHICLE_TRIP\n\nColumn                            Purpose\n\nvehicle_reservation_id            The booking this trip fulfills.\n\n                                  Fk to VEHICLE_TRIP_TYPE_SELECT. Member, service, internal or event - and\ntrip_type_code                    the type decides whether the trip counts toward revenue and utilization and\n                                  whether it posts member points.\n\nstart_time_actual,\n                                  When the car really left and really came back.\nend_time_actual\n\nodometer_start_id,\n                                  The two readings that bound the trip.\nodometer_end_id\n\nmiles_driven                      The difference between them.\n\nfuel_start_percent,\n                                  Fuel out and fuel back.\nfuel_end_percent\n\nextra_miles, extra_miles_reason   Miles the club added and why: fuel, service, delivery.",
+    "implementation_workflow": "1) Opening a Trip at Checkout\n    1. Create the VEHICLE_TRIP row when the car actually leaves, not when the reservation said it\n       would.\n    2. Set trip_type_code from VEHICLE_TRIP_TYPE_SELECT. The type is not a label - it carries\n       is_revenue and posts_points, which decide whether the trip counts toward revenue and\n       utilization and whether it posts member points.\n    3. Read those two flags rather than inferring behavior from the type name. A service trip posts no\n       points because the row says so, not because the code recognizes the word service. That is\n       what lets the club add a trip type as a row rather than as a release.\n    4. Capture fuel_start_percent using VEHICLE_FUEL_LEVEL_SELECT. Staff pick a familiar\n       fraction from a dropdown - Full, 7/8, 3/4 - and the platform stores the percent. Nothing holds a\n       foreign key to that table by design; it converts on the way in so the stored values arithmetic\n       cleanly for markup and consumption.\n    5. Capture start_time_actual as the real moment. A member collecting two hours late has a trip\n       that started two hours late, and the record should say so.\n    6. Capture the starting odometer reading into VEHICLE_ODOMETER_LOG and point\n       odometer_start_id at it.\n    7. Record the checkout event in VEHICLE_EVENT_LOG and link it back to the reservation.\n    8. Change the vehicle status to reflect that the car is out. See the Vehicles chapter.\n    9. Create the companion record for the trip type in the same transaction.\n\n2) Creating the Member Companion\n    1. Capture member_id, member_package_id, and member_package_participant_id. All three\n       matter: who, which membership, and which person on it.\n    2. The package decides pricing and entitlement; the participant decides attribution and, on a split\n       package, whose share is drawn.\n    3. Capture branch_id, the branch the trip ran from, and the source that produced it.\n    4. Capture start_type and return_type: whether the member collected the car or it was delivered,\n       and whether they return it or the club collects.\n    5. Snapshot the pricing at checkout: the vehicle tier, the weekday and weekend point values, the\n       extra-mile value, and the included miles. These come from the package\u2019s rate card and are\n       frozen here.\n    6. The snapshot is what makes a settled trip explainable years later. Without it the trip would\n       have to be repriced against a card that may since have changed.\n\n3) Custody During the Trip\n    1. The member\u2019s clock runs showroom to showroom. That single rule decides who pays for what,\n       and everything below follows from it.\n    2. Custody is tracked through handoff inspections, and every transfer captures an odometer\n       reading. A handoff marks where staff driving ends and member driving begins; it does not\n       mark where charging starts.\n    3. Delivery: a checkout inspection captures condition and odometer as the car leaves the\n       showroom, and a handoff inspection marks the moment the member receives it. The delivery\n       leg rides on the member\u2019s tab as staff-driven miles.\n    4. Pickup: a single handoff inspection captures condition and odometer as the keys change\n       hands at the showroom. There is no leg before it.\n    5. Return: a handoff inspection captures the odometer when custody transfers back to staff,\n       closing the member\u2019s driving segment. If the car needs fuel, staff DRIVE it to refuel after the\n       handoff, and the full check-in inspection at the showroom captures the final odometer and\n       condition.\n    6. Collection: a handoff inspection when the member surrenders the vehicle, and a check-in\n       inspection when it arrives back at the showroom. The collection leg lands on the member\u2019s tab\n       the same way the delivery leg does.\n    7. Every one of these moments is also logged as an event on the vehicle with photographs\n       attached where they matter. See the Vehicle Inspections chapter.\n    8. The trip is open. The car is with the member and the reservation is behind it.\n    9. Events during the trip attach to it: a refuel, a damage report, a roadside incident. Each writes a\n       VEHICLE_EVENT_LOG row against the trip.\n    10. Set incident_flag on the member companion where something happened that needs following\n        up. It is a signal, not a description; the events carry the detail.\n    11. A trip cannot be edited into a different reservation. If the wrong booking was checked out, the\n        trip is voided and reopened correctly rather than repointed.\n    12. Every completed reservation produces exactly one trip, and the trip\u2019s type mirrors the\n        reservation that created it: a member trip, a service trip, a transport, or an internal use.\n\n4) Closing a Trip at Check-In\n    1. Capture end_time_actual, the closing odometer reading, and fuel_end_percent.\n    2. Compute miles_driven from the two odometer readings, not from anything the member\n       reports.\n    3. Record extra_miles where STAFF drove the car during this member\u2019s trip: the fuel run after a\n       return, the repositioning miles of a delivery or a collection, or a service errand. Record the\n       reason on each.\n    4. Those miles are the member\u2019s responsibility. The member did not drive them, but the\n       member\u2019s trip caused them, and the showroom-to-showroom rule puts them on the member\u2019s\n       tab. extra_miles records and explains them; it does not subtract them.\n    5. miles_member is therefore the whole showroom-to-showroom figure, which is what\n       miles_driven already measures. The only thing that reduces it is miles_member_adjustment.\n    6. The one exception is miles the club drove for reasons that are not this member\u2019s trip - a\n       branch transfer, a service visit. Those are separate trips with their own records, not extra miles\n       on a member trip.\n    7. Record the check-in event and change the vehicle status. An inspection follows. See the\n       Inspections chapter.\n    8. The trip\u2019s book does not close at the inspection desk. If the car still needs fuel, staff make that\n       run and the miles are recorded against the trip. The car then goes on to be washed and\n       detailed, where damage or a missing item that check-in did not catch can still be discovered,\n       reported against the trip, and turned into tasks, charges, or flags for follow-up.\n    9. The trip\u2019s operational file accepts the whole wrap-up; it is settlement that finally closes the\n       money. Do not close the trip record at check-in.\n    10. Settlement follows check-in and is specified in the next guide.\n\nEXAMPLE \u2014 WHOSE MILES ARE WHOSE\n\nReading                       Value             Meaning\n\nOdometer at checkout          41,208            Anchors the start\n\nOdometer at check-in          41,560            Anchors the end\n\n                                                The difference; never member-reported. Showroom to\nmiles_driven                  352\n                                                showroom.\n\n                                                Of those 352, staff drove 40 - the delivery leg and the fuel\nextra_miles                   40\n                                                run. Recorded and explained, not subtracted.\n\nmiles_member_adjustment       0                 Nothing given back on this trip.\n\n                                                The member is measured against the whole showroom-to-\nmiles_member                  352\n                                                showroom figure.\n\n\n\n5) The Three Numbers, and Why They Are Separate\n    1. Member-driven miles: the odometer difference across the member\u2019s own custody segment,\n       handoff to handoff. This is operational truth and is never adjusted after the fact.\n    2. Staff miles on the member\u2019s tab: extra_miles, each with its reason. The member did not drive\n       them; the member\u2019s trip caused them.\n    3. The goodwill reduction: miles_member_adjustment, always with a reason - a gesture, a\n       dispute resolved in the member\u2019s favor, an operational error corrected.\n    4. Add the three together and the member\u2019s total is the showroom-to-showroom story: every mile\n       from the moment the car left until the moment it came home, less anything the club chose to\n       give back.\n    5. The design principle: what happened to the car is never rewritten, while what the member is\n       billed can be adjusted - with an audit trail that always explains the difference.\n    6. Where the club needs to adjust what a member is charged for, use miles_member_adjustment\n       with a reason rather than editing miles_member.\n    7. The adjustment is visible and explicable. An edited figure is neither.\n    8. Adjustments happen: a faulty odometer, a member sent on a detour by a closure, a goodwill\n       decision. All three deserve a record.\n\n6) Odometer Readings\n    1. Every reading goes into VEHICLE_ODOMETER_LOG, whatever workflow captured it:\n       checkout, check-in, an inspection, a service visit.\n    2. Record who captured it and when, and whether it was estimated.\n    3. quality_flag distinguishes a Good reading from an Estimated, Corrected, or Invalid one. An\n       Invalid reading is not silently accepted and must not be used in any mileage calculation.\n    4. effective_at is when the reading was true, which may differ from when it was entered.\n    5. The log is the vehicle\u2019s mileage history and is what any question about total mileage should\n       read, rather than a running column on the vehicle.",
+    "rules_and_constraints": "    1. A trip records what actually happened, not what the reservation said would happen.\n    2. Every trip has a core record and exactly one companion for its type.\n    3. A member trip records the member, the package, and the participant.\n    4. Pricing is snapshotted at checkout from the package\u2019s rate card, resolved through\n       MEMBER_PACKAGE_RATE - the package\u2019s own dated pointer, effective on the trip date.\n       Never resolve through the series link, which is only the seed.\n    5. miles_driven is computed from odometer readings and is never member-reported.\n    6. The member is charged showroom to showroom: the delivery leg, the collection leg, and the\n       fuel run are all the member\u2019s responsibility.\n    7. extra_miles records and explains the staff-driven portion of a member trip; it never subtracts\n       from what the member is measured against.\n    8. Member-driven miles are operational truth and are never adjusted after the fact.\n    9. Only miles_member_adjustment reduces what the member is charged for, and it always\n       carries a reason.\n    10. Every completed reservation produces exactly one trip, whose type mirrors the reservation.\n    11. The trip\u2019s operational file stays open past check-in; settlement is what closes it.\n    12. Member miles are adjusted through miles_member_adjustment with a reason, never by\n        editing.\n    13. A trip is never repointed to a different reservation.\n    14. Every odometer reading is logged with its capturer, its quality, and when it was true.",
+    "integration_and_edge_cases": "    1. A member collecting late. The trip starts when the car leaves. The reservation window is\n       what was promised; the trip is what happened, and settlement uses the trip.\n    2. A car delivered rather than collected. The trip still starts when the car leaves the branch,\n       and the delivery miles are extra_miles rather than the member\u2019s.\n    3. A member returning early. The trip ends when the car comes back. For a weekend, the\n       bundled rate still applies in full; see the Membership Plans chapter.\n    4. An odometer that has been replaced. The readings jump. quality_flag and a corrected\n       reading are how that is handled, rather than pretending the car did negative miles.\n    5. A trip with no reservation. Should not happen for a member trip and does happen for\n       internal moves. The reservation link is nullable for that reason.\n    6. The wrong car checked out. Void the trip and open the correct one. Repointing would make\n       the odometer readings belong to a car that never moved.\n    7. A trip open for weeks. A car out for extended service. Legitimate, and the reason nothing\n       assumes a trip is short.\n    8. A member trip on a shared package. The participant is who drove; the package is whose\n       allowance is drawn. On a split package those two together decide whose share is used.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                           Outcome\n\nCheckout recorded                 Trip opened; pricing snapshotted; vehicle status changed; event logged.\n\nCheck-in recorded                 Trip closed; miles computed; inspection raised; settlement begins.\n\nImplausible odometer reading      Flagged for review rather than accepted.\n\nIncident flagged during a trip    Task raised for follow-up.\n\nTrip open past its expected end   Surfaced to the branch.\n\n\n\nReserved for the automations pass: how far past an expected end a trip is surfaced, what makes an\nodometer reading implausible, and who receives incident follow-ups.",
+    "developer_notes": "    1. Actual, not scheduled. Every time on the trip is what happened. Copying the reservation\n       times into the trip loses the only reason the trip exists as a separate record.\n    2. Snapshot at checkout. Tier, point values, extra-mile rate, and included miles. Settlement\n       reads the snapshot, not the card, so a card change can never reprice a completed trip.\n    3. Miles come from the odometer. Two readings, one subtraction. Any member-reported figure\n       is a claim, not a measurement.\n    4. Extra miles are the club\u2019s. Delivery, fuel runs, and service moves all put miles on the car that\n       the member did not drive. Charging them is the most avoidable complaint in the chapter.\n    5. Adjust, never edit. miles_member_adjustment with a reason. An edited mileage figure cannot\n       be explained to a member six months later.\n    6. One companion per trip type. The core record carries what every trip shares; the companion\n       carries what only that kind has. A single wide table would leave most columns empty most of\n       the time.\n    7. Void and reopen, never repoint. A trip belongs to the reservation it was opened against.",
+    "testing_checklist": "Opening\n    \u2610 A trip opens with the actual departure time, not the scheduled one.\n    \u2610 A starting odometer reading is logged and linked.\n    \u2610 Pricing is snapshotted from the package rate card at checkout.\n    \u2610 The vehicle status changes and a checkout event is logged.\n    \u2610 A member trip records member, package, and participant.\n    \u2610 The core record and its companion are written in one transaction.\n\nDuring and Closing\n    \u2610 Events during a trip attach to it.\n    \u2610 A trip cannot be repointed to a different reservation.\n    \u2610 Check-in captures the closing reading and fuel level.\n    \u2610 miles_driven equals the difference between the two odometer readings.\n    \u2610 A delivered trip charges the member for the delivery leg.\n    \u2610 A collected trip charges the member for the collection leg.\n    \u2610 A fuel run after the return handoff is on the member\u2019s tab.\n    \u2610 extra_miles does not reduce miles_member.\n    \u2610 A goodwill reduction is recorded as an adjustment with a reason.\n    \u2610 Damage found at detailing can still be reported against the trip.\n    \u2610 A member returning early has a trip ending at the actual return.\n\nOdometer and Adjustments\n    \u2610 Every reading is logged with capturer, time, and quality flag.\n    \u2610 An implausible reading is flagged rather than accepted.\n    \u2610 A corrected reading is distinguishable from an original one.\n    \u2610 A member mileage adjustment records a reason and leaves miles_member intact.\n    \u2610 Total vehicle mileage reads from the log rather than a running column."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Opening a Trip at Checkout",
+      "page": 111,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Create the VEHICLE_TRIP row when the car actually leaves, not when the reservation said it would.",
+          "page": 111
+        },
+        {
+          "n": 2,
+          "text": "Set trip_type_code from VEHICLE_TRIP_TYPE_SELECT. The type is not a label - it carries is_revenue and posts_points, which decide whether the trip counts toward revenue and utilization and whether it posts member points.",
+          "page": 111
+        },
+        {
+          "n": 3,
+          "text": "Read those two flags rather than inferring behavior from the type name. A service trip posts no points because the row says so, not because the code recognizes the word service. That is what lets the club add a trip type as a row rather than as a release.",
+          "page": 111
+        },
+        {
+          "n": 4,
+          "text": "Capture fuel_start_percent using VEHICLE_FUEL_LEVEL_SELECT. Staff pick a familiar fraction from a dropdown - Full, 7/8, 3/4 - and the platform stores the percent. Nothing holds a foreign key to that table by design; it converts on the way in so the stored values arithmetic cleanly for markup and consumption.",
+          "page": 111
+        },
+        {
+          "n": 5,
+          "text": "Capture start_time_actual as the real moment. A member collecting two hours late has a trip that started two hours late, and the record should say so.",
+          "page": 111
+        },
+        {
+          "n": 6,
+          "text": "Capture the starting odometer reading into VEHICLE_ODOMETER_LOG and point odometer_start_id at it.",
+          "page": 111
+        },
+        {
+          "n": 7,
+          "text": "Record the checkout event in VEHICLE_EVENT_LOG and link it back to the reservation.",
+          "page": 111
+        },
+        {
+          "n": 8,
+          "text": "Change the vehicle status to reflect that the car is out. See the Vehicles chapter.",
+          "page": 111
+        },
+        {
+          "n": 9,
+          "text": "Create the companion record for the trip type in the same transaction.",
+          "page": 111
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Creating the Member Companion",
+      "page": 111,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Capture member_id, member_package_id, and member_package_participant_id. All three matter: who, which membership, and which person on it.",
+          "page": 111
+        },
+        {
+          "n": 2,
+          "text": "The package decides pricing and entitlement; the participant decides attribution and, on a split package, whose share is drawn.",
+          "page": 111
+        },
+        {
+          "n": 3,
+          "text": "Capture branch_id, the branch the trip ran from, and the source that produced it.",
+          "page": 111
+        },
+        {
+          "n": 4,
+          "text": "Capture start_type and return_type: whether the member collected the car or it was delivered, and whether they return it or the club collects.",
+          "page": 111
+        },
+        {
+          "n": 5,
+          "text": "Snapshot the pricing at checkout: the vehicle tier, the weekday and weekend point values, the extra-mile value, and the included miles. These come from the package\u2019s rate card and are frozen here.",
+          "page": 111
+        },
+        {
+          "n": 6,
+          "text": "The snapshot is what makes a settled trip explainable years later. Without it the trip would have to be repriced against a card that may since have changed.",
+          "page": 111
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Custody During the Trip",
+      "page": 111,
+      "steps": [
+        {
+          "n": 1,
+          "text": "The member\u2019s clock runs showroom to showroom. That single rule decides who pays for what, and everything below follows from it.",
+          "page": 111
+        },
+        {
+          "n": 2,
+          "text": "Custody is tracked through handoff inspections, and every transfer captures an odometer reading. A handoff marks where staff driving ends and member driving begins; it does not mark where charging starts.",
+          "page": 111
+        },
+        {
+          "n": 3,
+          "text": "Delivery: a checkout inspection captures condition and odometer as the car leaves the showroom, and a handoff inspection marks the moment the member receives it. The delivery leg rides on the member\u2019s tab as staff-driven miles.",
+          "page": 112
+        },
+        {
+          "n": 4,
+          "text": "Pickup: a single handoff inspection captures condition and odometer as the keys change hands at the showroom. There is no leg before it.",
+          "page": 112
+        },
+        {
+          "n": 5,
+          "text": "Return: a handoff inspection captures the odometer when custody transfers back to staff, closing the member\u2019s driving segment. If the car needs fuel, staff DRIVE it to refuel after the handoff, and the full check-in inspection at the showroom captures the final odometer and condition.",
+          "page": 112
+        },
+        {
+          "n": 6,
+          "text": "Collection: a handoff inspection when the member surrenders the vehicle, and a check-in inspection when it arrives back at the showroom. The collection leg lands on the member\u2019s tab the same way the delivery leg does.",
+          "page": 112
+        },
+        {
+          "n": 7,
+          "text": "Every one of these moments is also logged as an event on the vehicle with photographs attached where they matter. See the Vehicle Inspections chapter.",
+          "page": 112
+        },
+        {
+          "n": 8,
+          "text": "The trip is open. The car is with the member and the reservation is behind it.",
+          "page": 112
+        },
+        {
+          "n": 9,
+          "text": "Events during the trip attach to it: a refuel, a damage report, a roadside incident. Each writes a VEHICLE_EVENT_LOG row against the trip.",
+          "page": 112
+        },
+        {
+          "n": 10,
+          "text": "Set incident_flag on the member companion where something happened that needs following up. It is a signal, not a description; the events carry the detail.",
+          "page": 112
+        },
+        {
+          "n": 11,
+          "text": "A trip cannot be edited into a different reservation. If the wrong booking was checked out, the trip is voided and reopened correctly rather than repointed.",
+          "page": 112
+        },
+        {
+          "n": 12,
+          "text": "Every completed reservation produces exactly one trip, and the trip\u2019s type mirrors the reservation that created it: a member trip, a service trip, a transport, or an internal use.",
+          "page": 112
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Closing a Trip at Check-In",
+      "page": 112,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Capture end_time_actual, the closing odometer reading, and fuel_end_percent.",
+          "page": 112
+        },
+        {
+          "n": 2,
+          "text": "Compute miles_driven from the two odometer readings, not from anything the member reports.",
+          "page": 112
+        },
+        {
+          "n": 3,
+          "text": "Record extra_miles where STAFF drove the car during this member\u2019s trip: the fuel run after a return, the repositioning miles of a delivery or a collection, or a service errand. Record the reason on each.",
+          "page": 112
+        },
+        {
+          "n": 4,
+          "text": "Those miles are the member\u2019s responsibility. The member did not drive them, but the member\u2019s trip caused them, and the showroom-to-showroom rule puts them on the member\u2019s tab. extra_miles records and explains them; it does not subtract them.",
+          "page": 112
+        },
+        {
+          "n": 5,
+          "text": "miles_member is therefore the whole showroom-to-showroom figure, which is what miles_driven already measures. The only thing that reduces it is miles_member_adjustment.",
+          "page": 112
+        },
+        {
+          "n": 6,
+          "text": "The one exception is miles the club drove for reasons that are not this member\u2019s trip - a branch transfer, a service visit. Those are separate trips with their own records, not extra miles on a member trip.",
+          "page": 112
+        },
+        {
+          "n": 7,
+          "text": "Record the check-in event and change the vehicle status. An inspection follows. See the Inspections chapter.",
+          "page": 112
+        },
+        {
+          "n": 8,
+          "text": "The trip\u2019s book does not close at the inspection desk. If the car still needs fuel, staff make that run and the miles are recorded against the trip. The car then goes on to be washed and detailed, where damage or a missing item that check-in did not catch can still be discovered, reported against the trip, and turned into tasks, charges, or flags for follow-up.",
+          "page": 112
+        },
+        {
+          "n": 9,
+          "text": "The trip\u2019s operational file accepts the whole wrap-up; it is settlement that finally closes the money. Do not close the trip record at check-in.",
+          "page": 113
+        },
+        {
+          "n": 10,
+          "text": "Settlement follows check-in and is specified in the next guide. The difference; never member-reported. Showroom to showroom. Of those 352, staff drove 40 - the delivery leg and the fuel run. Recorded and explained, not subtracted. The member is measured against the whole showroom-to- showroom figure.",
+          "page": 113
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "title": "The Three Numbers, and Why They Are Separate",
+      "page": 113,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Member-driven miles: the odometer difference across the member\u2019s own custody segment, handoff to handoff. This is operational truth and is never adjusted after the fact.",
+          "page": 113
+        },
+        {
+          "n": 2,
+          "text": "Staff miles on the member\u2019s tab: extra_miles, each with its reason. The member did not drive them; the member\u2019s trip caused them.",
+          "page": 113
+        },
+        {
+          "n": 3,
+          "text": "The goodwill reduction: miles_member_adjustment, always with a reason - a gesture, a dispute resolved in the member\u2019s favor, an operational error corrected.",
+          "page": 113
+        },
+        {
+          "n": 4,
+          "text": "Add the three together and the member\u2019s total is the showroom-to-showroom story: every mile from the moment the car left until the moment it came home, less anything the club chose to give back.",
+          "page": 113
+        },
+        {
+          "n": 5,
+          "text": "The design principle: what happened to the car is never rewritten, while what the member is billed can be adjusted - with an audit trail that always explains the difference.",
+          "page": 113
+        },
+        {
+          "n": 6,
+          "text": "Where the club needs to adjust what a member is charged for, use miles_member_adjustment with a reason rather than editing miles_member.",
+          "page": 113
+        },
+        {
+          "n": 7,
+          "text": "The adjustment is visible and explicable. An edited figure is neither.",
+          "page": 113
+        },
+        {
+          "n": 8,
+          "text": "Adjustments happen: a faulty odometer, a member sent on a detour by a closure, a goodwill decision. All three deserve a record.",
+          "page": 113
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "title": "Odometer Readings",
+      "page": 113,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Every reading goes into VEHICLE_ODOMETER_LOG, whatever workflow captured it: checkout, check-in, an inspection, a service visit.",
+          "page": 113
+        },
+        {
+          "n": 2,
+          "text": "Record who captured it and when, and whether it was estimated.",
+          "page": 113
+        },
+        {
+          "n": 3,
+          "text": "quality_flag distinguishes a Good reading from an Estimated, Corrected, or Invalid one. An Invalid reading is not silently accepted and must not be used in any mileage calculation.",
+          "page": 113
+        },
+        {
+          "n": 4,
+          "text": "effective_at is when the reading was true, which may differ from when it was entered.",
+          "page": 113
+        },
+        {
+          "n": 5,
+          "text": "The log is the vehicle\u2019s mileage history and is what any question about total mileage should read, rather than a running column on the vehicle.",
+          "page": 114
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "A trip records what actually happened, not what the reservation said would happen.",
+      "page": 114,
+      "rule_id": "10.1-R01"
+    },
+    {
+      "n": 2,
+      "text": "Every trip has a core record and exactly one companion for its type.",
+      "page": 114,
+      "rule_id": "10.1-R02"
+    },
+    {
+      "n": 3,
+      "text": "A member trip records the member, the package, and the participant.",
+      "page": 114,
+      "rule_id": "10.1-R03"
+    },
+    {
+      "n": 4,
+      "text": "Pricing is snapshotted at checkout from the package\u2019s rate card, resolved through MEMBER_PACKAGE_RATE - the package\u2019s own dated pointer, effective on the trip date. Never resolve through the series link, which is only the seed.",
+      "page": 114,
+      "rule_id": "10.1-R04"
+    },
+    {
+      "n": 5,
+      "text": "miles_driven is computed from odometer readings and is never member-reported.",
+      "page": 114,
+      "rule_id": "10.1-R05"
+    },
+    {
+      "n": 6,
+      "text": "The member is charged showroom to showroom: the delivery leg, the collection leg, and the fuel run are all the member\u2019s responsibility.",
+      "page": 114,
+      "rule_id": "10.1-R06"
+    },
+    {
+      "n": 7,
+      "text": "extra_miles records and explains the staff-driven portion of a member trip; it never subtracts from what the member is measured against.",
+      "page": 114,
+      "rule_id": "10.1-R07"
+    },
+    {
+      "n": 8,
+      "text": "Member-driven miles are operational truth and are never adjusted after the fact.",
+      "page": 114,
+      "rule_id": "10.1-R08"
+    },
+    {
+      "n": 9,
+      "text": "Only miles_member_adjustment reduces what the member is charged for, and it always carries a reason.",
+      "page": 114,
+      "rule_id": "10.1-R09"
+    },
+    {
+      "n": 10,
+      "text": "Every completed reservation produces exactly one trip, whose type mirrors the reservation.",
+      "page": 114,
+      "rule_id": "10.1-R10"
+    },
+    {
+      "n": 11,
+      "text": "The trip\u2019s operational file stays open past check-in; settlement is what closes it.",
+      "page": 114,
+      "rule_id": "10.1-R11"
+    },
+    {
+      "n": 12,
+      "text": "Member miles are adjusted through miles_member_adjustment with a reason, never by editing.",
+      "page": 114,
+      "rule_id": "10.1-R12"
+    },
+    {
+      "n": 13,
+      "text": "A trip is never repointed to a different reservation.",
+      "page": 114,
+      "rule_id": "10.1-R13"
+    },
+    {
+      "n": 14,
+      "text": "Every odometer reading is logged with its capturer, its quality, and when it was true.",
+      "page": 114,
+      "rule_id": "10.1-R14"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A member collecting late. The trip starts when the car leaves. The reservation window is what was promised; the trip is what happened, and settlement uses the trip.",
+      "page": 114
+    },
+    {
+      "n": 2,
+      "text": "A car delivered rather than collected. The trip still starts when the car leaves the branch, and the delivery miles are extra_miles rather than the member\u2019s.",
+      "page": 114
+    },
+    {
+      "n": 3,
+      "text": "A member returning early. The trip ends when the car comes back. For a weekend, the bundled rate still applies in full; see the Membership Plans chapter.",
+      "page": 114
+    },
+    {
+      "n": 4,
+      "text": "An odometer that has been replaced. The readings jump. quality_flag and a corrected reading are how that is handled, rather than pretending the car did negative miles.",
+      "page": 114
+    },
+    {
+      "n": 5,
+      "text": "A trip with no reservation. Should not happen for a member trip and does happen for internal moves. The reservation link is nullable for that reason.",
+      "page": 114
+    },
+    {
+      "n": 6,
+      "text": "The wrong car checked out. Void the trip and open the correct one. Repointing would make the odometer readings belong to a car that never moved.",
+      "page": 114
+    },
+    {
+      "n": 7,
+      "text": "A trip open for weeks. A car out for extended service. Legitimate, and the reason nothing assumes a trip is short.",
+      "page": 114
+    },
+    {
+      "n": 8,
+      "text": "A member trip on a shared package. The participant is who drove; the package is whose allowance is drawn. On a split package those two together decide whose share is used.",
+      "page": 114
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Actual, not scheduled. Every time on the trip is what happened. Copying the reservation times into the trip loses the only reason the trip exists as a separate record.",
+      "page": 115
+    },
+    {
+      "n": 2,
+      "text": "Snapshot at checkout. Tier, point values, extra-mile rate, and included miles. Settlement reads the snapshot, not the card, so a card change can never reprice a completed trip.",
+      "page": 115
+    },
+    {
+      "n": 3,
+      "text": "Miles come from the odometer. Two readings, one subtraction. Any member-reported figure is a claim, not a measurement.",
+      "page": 115
+    },
+    {
+      "n": 4,
+      "text": "Extra miles are the club\u2019s. Delivery, fuel runs, and service moves all put miles on the car that the member did not drive. Charging them is the most avoidable complaint in the chapter.",
+      "page": 115
+    },
+    {
+      "n": 5,
+      "text": "Adjust, never edit. miles_member_adjustment with a reason. An edited mileage figure cannot be explained to a member six months later.",
+      "page": 115
+    },
+    {
+      "n": 6,
+      "text": "One companion per trip type. The core record carries what every trip shares; the companion carries what only that kind has. A single wide table would leave most columns empty most of the time.",
+      "page": 115
+    },
+    {
+      "n": 7,
+      "text": "Void and reopen, never repoint. A trip belongs to the reservation it was opened against.",
+      "page": 115
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Opening",
+      "text": "A trip opens with the actual departure time, not the scheduled one.",
+      "page": 115,
+      "item_id": "10.1-C01",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Opening",
+      "text": "A starting odometer reading is logged and linked.",
+      "page": 115,
+      "item_id": "10.1-C02",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Opening",
+      "text": "Pricing is snapshotted from the package rate card at checkout.",
+      "page": 115,
+      "item_id": "10.1-C03",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Opening",
+      "text": "The vehicle status changes and a checkout event is logged.",
+      "page": 115,
+      "item_id": "10.1-C04",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Opening",
+      "text": "A member trip records member, package, and participant.",
+      "page": 115,
+      "item_id": "10.1-C05",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Opening",
+      "text": "The core record and its companion are written in one transaction.",
+      "page": 115,
+      "item_id": "10.1-C06",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "Events during a trip attach to it.",
+      "page": 116,
+      "item_id": "10.1-C07",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "A trip cannot be repointed to a different reservation.",
+      "page": 116,
+      "item_id": "10.1-C08",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "Check-in captures the closing reading and fuel level.",
+      "page": 116,
+      "item_id": "10.1-C09",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "miles_driven equals the difference between the two odometer readings.",
+      "page": 116,
+      "item_id": "10.1-C10",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "A delivered trip charges the member for the delivery leg.",
+      "page": 116,
+      "item_id": "10.1-C11",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "A collected trip charges the member for the collection leg.",
+      "page": 116,
+      "item_id": "10.1-C12",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "A fuel run after the return handoff is on the member\u2019s tab.",
+      "page": 116,
+      "item_id": "10.1-C13",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "extra_miles does not reduce miles_member.",
+      "page": 116,
+      "item_id": "10.1-C14",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "A goodwill reduction is recorded as an adjustment with a reason.",
+      "page": 116,
+      "item_id": "10.1-C15",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "Damage found at detailing can still be reported against the trip.",
+      "page": 116,
+      "item_id": "10.1-C16",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "During and Closing",
+      "text": "A member returning early has a trip ending at the actual return.",
+      "page": 116,
+      "item_id": "10.1-C17",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Odometer and Adjustments",
+      "text": "Every reading is logged with capturer, time, and quality flag.",
+      "page": 116,
+      "item_id": "10.1-C18",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Odometer and Adjustments",
+      "text": "An implausible reading is flagged rather than accepted.",
+      "page": 116,
+      "item_id": "10.1-C19",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Odometer and Adjustments",
+      "text": "A corrected reading is distinguishable from an original one.",
+      "page": 116,
+      "item_id": "10.1-C20",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Odometer and Adjustments",
+      "text": "A member mileage adjustment records a reason and leaves miles_member intact.",
+      "page": 116,
+      "item_id": "10.1-C21",
+      "guide_id": "10.1"
+    },
+    {
+      "group": "Odometer and Adjustments",
+      "text": "Total vehicle mileage reads from the log rather than a running column.",
+      "page": 116,
+      "item_id": "10.1-C22",
+      "guide_id": "10.1"
+    }
+  ],
+  "checklist_count": 22
+}

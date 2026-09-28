@@ -1,0 +1,540 @@
+{
+  "guide_id": "10.5",
+  "chapter_no": 10,
+  "part_no": 3,
+  "title": "Toll Transactions",
+  "page_start": 130,
+  "page_end": 135,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 3 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 10, section HOW TOLL TRANSACTIONS WORK",
+  "tables_referenced": [
+    "BRANCH_TOLL_SOURCE",
+    "TOLL_AUTHORITY_SELECT",
+    "VEHICLE_TOLL_TRANSACTION"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "Every car carries a toll tag, and the tolls arrive weeks later as a file from the toll authority, listing a tag,\na time, a place, and an amount. Somebody has to work out who was driving and recover the money.\nThis guide covers importing those transactions, matching them to trips, and recharging them to\nmembers.\nThe problem it solves is small in each instance and large in aggregate. Individually a toll is a few\ndollars; across a fleet across a year it is real money, and doing it by hand is the sort of task that\nquietly stops being done.\nPairs with How It Works chapter 10, section HOW TOLL TRANSACTIONS WORK.",
+    "schema_overview": "KEY COLUMNS ON BRANCH_TOLL_SOURCE\n\nColumn                           Purpose\n\nbranch_id, toll_authority_code   Which branch receives tolls from which authority. One row per pairing.\n\n                                 The connector the tolls arrive through; empty where an administrator places the\nintegration_provider_id\n                                 file by hand.\n\n                                 How they reach the platform, in the same terms as import_source on the\narrival_method\n                                 transaction.\n\nexpected_frequency               How often tolls are expected. What makes an absence answerable.\n\nlast_import_at,                  When tolls last arrived and in which batch. Stamped by the import, never by\nlast_import_batch_id             hand.\n\n                                 Whether the feed is expected to be running. A branch that drops an authority is\nis_active\n                                 deactivated, not deleted.\n\n\n\n\nKEY COLUMNS ON VEHICLE_TOLL_TRANSACTION\n\nColumn                           Purpose\n\nvehicle_id, toll_tag             Which car, and the tag the authority reported.\n\ntransaction_at                   When the toll was incurred. The key to matching.\n\ntoll_authority_code, location,\n                                 Who charged it, where, and how much.\namount\n\nimport_source, import_batch_id   Which file it came from, so a bad import can be traced.\n\nmatch_status                     Unmatched, Matched, Disputed, or Excluded.\n\nvehicle_trip_id                  The trip it was matched to.\n\nmember_charge_id                 The charge raised to recover it.",
+    "implementation_workflow": "1) Importing a Batch\n    1. Each branch\u2019s region has its own toll authorities, resolved through\n       TOLL_AUTHORITY_SELECT. A club operating in three markets deals with three sets of\n       authorities, each with its own file format and its own reporting habits.\n    2. Imports arrive on whatever cadence each authority supports - real time, daily, weekly, monthly,\n       or a file somebody downloads by hand. This is deliberately open-ended. Do not build a fixed\n       schedule or assume a single source: the import path must accept a batch whenever one\n       arrives, from whichever authority, at whatever interval.\n    3. Tolls reach the platform through the Zapier connector, configured by an administrator per\n       authority. Where the authority offers a direct feed the connector reads it; where it publishes a\n       downloadable report the administrator places that report where the connector picks it up. THE\n       MAPPING FROM THE AUTHORITY\u2019S COLUMNS INTO THE TOLL RECORD LIVES IN THE\n       CONNECTOR, not in the platform - adding a city or an authority is configuration, not\n       development.\n    4. BRANCH_TOLL_SOURCE is the record of what is expected: which authority serves which\n       branch, the integration_provider_id it arrives through, arrival_method, and\n       expected_frequency. Stamp last_import_at and last_import_batch_id on every import. A feed\n       that stops producing is otherwise indistinguishable from a month with no toll travel.\n    5. Import from the batch the connector delivers, recording import_source and a batch identifier on\n       every row.\n    6. Resolve the tag to a vehicle. A tag that resolves to nothing is imported anyway, unmatched,\n       rather than discarded, because a tag the club does not recognize is worth investigating.\n    7. Do not import the same transaction twice. Deduplicate on the authority, the tag, and the\n       timestamp.\n    8. Set match_status to Unmatched on import. Matching is a separate step.\n\n2) Matching to a Trip\n    1. Find the trip for that vehicle whose actual window contains transaction_at. That is the match.\n    2. Set vehicle_trip_id and move match_status to Matched.\n    3. A toll falling outside every trip is a club movement or an anomaly. Leave it unmatched and\n       surface it.\n    4. A toll falling inside a service or internal trip is the club\u2019s cost. Matched, but no member charge.\n    5. A toll that should not be billed at all is marked excluded rather than Disputed - a staff\n       repositioning run, an authority error. Excluded is the club\u2019s decision that this is not a member\u2019s\n       to pay; disputed is a member\u2019s contention still being resolved. Different facts, never collapsed.\n    6. Match against actual trip times, never reservation times. A member who collected late did not\n       incur a toll before they had the car.\n\nEXAMPLE \u2014 WHAT A MATCH PRODUCES\n\nSituation                     match_status     Charge raised\n\nInside a member trip          Matched          Yes, to that member\n\nInside a service trip         Matched          No; club cost\nSituation                     match_status      Charge raised\n\nOutside every trip            Unmatched         No; surfaced for review\n\nTag not recognized            Unmatched         No; surfaced for review\n\nMember disputes it            Disputed          Held pending resolution\n\n\n\n3) Recharging to the Member\n    1. Every toll is captured individually and that list never collapses. One row per toll event, with its\n       authority, place, timestamp and amount, for ever.\n    2. Billing is the opposite. At billing time, sum all of a trip\u2019s matched tolls and post a single\n       member charge for the total - not one charge per toll. A member who drove through eight\n       gantries on one weekend sees one toll line, not eight.\n    3. Exclude Excluded and Disputed tolls from the sum. Only Matched tolls on a member trip are\n       billed.\n    4. Set member_charge_id on every toll in that group, pointing at the one charge. That is what lets\n       the single statement line unfold back into the exact toll events behind it. The relationship is\n       many tolls to one charge, which is why the column sits on the toll rather than the other way\n       round.\n    5. Describe the charge so a member recognizes it: the trip it covers and how many tolls, with the\n       individual authority, place and date available behind it. A statement line reading only Toll will\n       produce a telephone call.\n    6. Any club markup on tolls is a commercial decision and belongs in the charge, not in the\n       imported amount. Keep what the authority charged as the authority charged it.\n\n4) Handling Disputes and Corrections\n    1. A member disputing a toll moves the transaction to Disputed. The charge is not silently voided;\n       somebody looks.\n    2. Where the dispute succeeds, void the member charge with a reason. The transaction stays,\n       matched, as the club\u2019s cost.\n    3. Where an authority reverses a toll, import the reversal rather than deleting the original.\n    4. Never delete an imported transaction. The batch it came in is a record of what the authority\n       said.\n\n5) Working the Unmatched\n    1. Unmatched transactions are the work. A queue of them, oldest first, is the screen that makes\n       this feature earn its keep.\n    2. Common causes: a toll during a gap between trips, a car moved without a trip recorded, a tag\n       on a car sold months ago.\n    3. Each of those is worth knowing about. The unmatched queue is a fleet diagnostic as much as\n       a billing one.\n    4. A transaction may be matched manually where the automatic match failed but a person can\n       see the answer.",
+    "rules_and_constraints": "    1. Every imported transaction records its source and batch.\n    2. Duplicates are prevented on authority, tag, and timestamp.\n    3. A transaction whose tag resolves to no vehicle is imported unmatched, never discarded.\n    4. Matching uses actual trip times, never reservation times.\n    5. Every toll is captured individually and that list never collapses.\n    6. Billing is aggregate: a trip\u2019s matched tolls are summed into one member charge, never one\n       charge per toll.\n    7. Every toll in a billed group records the charge it was billed under.\n    8. Excluded and Disputed tolls are left out of the sum.\n    9. Excluded means the club has decided it is not a member\u2019s to pay; disputed means a member\n       is contesting it.\n    10. Toll authorities are per region and imports arrive on whatever cadence each supports; no fixed\n        schedule is assumed.\n    11. A toll inside a service or internal trip is the club\u2019s cost.\n    12. The imported amount is what the authority charged; any markup lives in the charge.\n    13. A disputed toll is held for review rather than voided automatically.\n    14. A reversal is imported; the original is never deleted.\n    15. No imported transaction is ever deleted.",
+    "integration_and_edge_cases": "    1. A toll two minutes after check-in. Outside the trip, so unmatched. Usually the member\n       driving away from the branch in their own car, and usually the club\u2019s to absorb, but a person\n       should decide.\n    2. A toll during a gap between two member trips. The club moved the car. Unmatched,\n       surfaced, and almost always a club cost.\n    3. A tag on a car the club sold. Should not happen and does. The unmatched queue is how it is\n       discovered, and the answer is to return the tag.\n    4. A member disputing a toll they did incur. Disputed, reviewed, and either upheld or written\n       off. The transaction stays either way.\n    5. A batch imported twice. Deduplication catches it. Without the check, every member is\n       charged twice and the club finds out from complaints.\n    6. A toll on a shared package. Charged to the member who drove, which is the participant on\n       the trip, not necessarily the primary.\n    7. An authority reversing a toll months later. Imported as its own transaction and reconciled\n       against the original.\n    8. Tolls arriving after a member has left the club. The charge is still theirs and the club\n       decides whether to pursue it. The record does not become somebody else\u2019s.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                         Outcome\n\nBatch imported                  Transactions created; duplicates rejected; tags resolved to vehicles.\n\nMatching run                    Transactions matched to trips by vehicle and time.\n\nMatch to a member trip          Dollar charge raised to that member, linked back.\n\nTransaction unmatched           Added to the review queue.\n\nMember disputes a toll          Status set to Disputed; charge held pending review.\n\nUnmatched queue growing         Surfaced to staff.\n\n\nReserved for the automations pass: import schedule and source configuration, the matching tolerance\naround trip boundaries, and how long a disputed toll is held.",
+    "developer_notes": "    1. Capture individually, bill in aggregate. These pull in opposite directions and both are right:\n       the detail is the record, the charge is what a member reads. One charge per toll produces a\n       statement nobody can use; one row per charge destroys the ability to answer which gantry.\n    2. Deduplicate on import. Authority, tag, and timestamp. A double import charges every\n       member twice and the club hears about it from members rather than from the system.\n    3. Import first, match second. Two separate steps. Combining them means a matching failure\n       loses the transaction, which is the one thing that must not happen.\n    4. Match on actual times. Reservation times would charge a member for a toll incurred before\n       they had the car.\n    5. Never discard an unresolvable row. An unrecognised tag is information. Import it\n       unmatched and let somebody look.\n    6. Keep the authority amount pure. Whatever the club adds belongs in the charge. Mixing\n       them makes reconciliation against the authority impossible.\n    7. The unmatched queue is a feature. Build it as a working screen rather than an error log,\n       because it is where cars moved without trips and tags on sold cars get discovered.\n    8. Never delete. Reversals are transactions. The batch record is what lets a bad import be\n       unwound.",
+    "testing_checklist": "Import\n    \u2610 Every imported transaction records its source and batch.\n    \u2610 Importing the same batch twice creates no duplicates.\n    \u2610 A tag resolving to no vehicle is imported unmatched.\n    \u2610 Transactions are created with a status of Unmatched.\n\nMatching\n    \u2610 A toll inside a member trip window is matched to that trip.\n    \u2610 Matching uses actual trip times rather than reservation times.\n    \u2610 A toll inside a service trip is matched and raises no member charge.\n    \u2610 A toll outside every trip stays unmatched and appears in the queue.\n    \u2610 A transaction can be matched manually.\n\nCharging and Disputes\n    \u2610 A trip with several matched tolls produces one member charge for their total.\n    \u2610 Every toll in that group records the same member_charge_id.\n    \u2610 The single charge unfolds back into the individual toll events.\n    \u2610 An excluded toll is not included in the billed total.\n    \u2610 A disputed toll is not included in the billed total.\n    \u2610 A toll marked Excluded is distinguishable from one marked Disputed.\n    \u2610 The charge description names the authority, place, and date.\n    \u2610 The imported amount is unchanged by any club markup.\n    \u2610 A disputed toll holds the charge rather than voiding it.\n    \u2610 An upheld dispute voids the charge with a reason and keeps the transaction.\n    \u2610 A reversal is imported as its own transaction.\n    \u2610 No imported transaction can be deleted."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Importing a Batch",
+      "page": 131,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Each branch\u2019s region has its own toll authorities, resolved through TOLL_AUTHORITY_SELECT. A club operating in three markets deals with three sets of authorities, each with its own file format and its own reporting habits.",
+          "page": 131
+        },
+        {
+          "n": 2,
+          "text": "Imports arrive on whatever cadence each authority supports - real time, daily, weekly, monthly, or a file somebody downloads by hand. This is deliberately open-ended. Do not build a fixed schedule or assume a single source: the import path must accept a batch whenever one arrives, from whichever authority, at whatever interval.",
+          "page": 131
+        },
+        {
+          "n": 3,
+          "text": "Tolls reach the platform through the Zapier connector, configured by an administrator per authority. Where the authority offers a direct feed the connector reads it; where it publishes a downloadable report the administrator places that report where the connector picks it up. THE MAPPING FROM THE AUTHORITY\u2019S COLUMNS INTO THE TOLL RECORD LIVES IN THE CONNECTOR, not in the platform - adding a city or an authority is configuration, not development.",
+          "page": 131
+        },
+        {
+          "n": 4,
+          "text": "BRANCH_TOLL_SOURCE is the record of what is expected: which authority serves which branch, the integration_provider_id it arrives through, arrival_method, and expected_frequency. Stamp last_import_at and last_import_batch_id on every import. A feed that stops producing is otherwise indistinguishable from a month with no toll travel.",
+          "page": 131
+        },
+        {
+          "n": 5,
+          "text": "Import from the batch the connector delivers, recording import_source and a batch identifier on every row.",
+          "page": 131
+        },
+        {
+          "n": 6,
+          "text": "Resolve the tag to a vehicle. A tag that resolves to nothing is imported anyway, unmatched, rather than discarded, because a tag the club does not recognize is worth investigating.",
+          "page": 131
+        },
+        {
+          "n": 7,
+          "text": "Do not import the same transaction twice. Deduplicate on the authority, the tag, and the timestamp.",
+          "page": 131
+        },
+        {
+          "n": 8,
+          "text": "Set match_status to Unmatched on import. Matching is a separate step.",
+          "page": 131
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Matching to a Trip",
+      "page": 131,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Find the trip for that vehicle whose actual window contains transaction_at. That is the match.",
+          "page": 131
+        },
+        {
+          "n": 2,
+          "text": "Set vehicle_trip_id and move match_status to Matched.",
+          "page": 131
+        },
+        {
+          "n": 3,
+          "text": "A toll falling outside every trip is a club movement or an anomaly. Leave it unmatched and surface it.",
+          "page": 131
+        },
+        {
+          "n": 4,
+          "text": "A toll falling inside a service or internal trip is the club\u2019s cost. Matched, but no member charge.",
+          "page": 131
+        },
+        {
+          "n": 5,
+          "text": "A toll that should not be billed at all is marked excluded rather than Disputed - a staff repositioning run, an authority error. Excluded is the club\u2019s decision that this is not a member\u2019s to pay; disputed is a member\u2019s contention still being resolved. Different facts, never collapsed.",
+          "page": 131
+        },
+        {
+          "n": 6,
+          "text": "Match against actual trip times, never reservation times. A member who collected late did not incur a toll before they had the car.",
+          "page": 131
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Recharging to the Member",
+      "page": 132,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Every toll is captured individually and that list never collapses. One row per toll event, with its authority, place, timestamp and amount, for ever.",
+          "page": 132
+        },
+        {
+          "n": 2,
+          "text": "Billing is the opposite. At billing time, sum all of a trip\u2019s matched tolls and post a single member charge for the total - not one charge per toll. A member who drove through eight gantries on one weekend sees one toll line, not eight.",
+          "page": 132
+        },
+        {
+          "n": 3,
+          "text": "Exclude Excluded and Disputed tolls from the sum. Only Matched tolls on a member trip are billed.",
+          "page": 132
+        },
+        {
+          "n": 4,
+          "text": "Set member_charge_id on every toll in that group, pointing at the one charge. That is what lets the single statement line unfold back into the exact toll events behind it. The relationship is many tolls to one charge, which is why the column sits on the toll rather than the other way round.",
+          "page": 132
+        },
+        {
+          "n": 5,
+          "text": "Describe the charge so a member recognizes it: the trip it covers and how many tolls, with the individual authority, place and date available behind it. A statement line reading only Toll will produce a telephone call.",
+          "page": 132
+        },
+        {
+          "n": 6,
+          "text": "Any club markup on tolls is a commercial decision and belongs in the charge, not in the imported amount. Keep what the authority charged as the authority charged it.",
+          "page": 132
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Handling Disputes and Corrections",
+      "page": 132,
+      "steps": [
+        {
+          "n": 1,
+          "text": "A member disputing a toll moves the transaction to Disputed. The charge is not silently voided; somebody looks.",
+          "page": 132
+        },
+        {
+          "n": 2,
+          "text": "Where the dispute succeeds, void the member charge with a reason. The transaction stays, matched, as the club\u2019s cost.",
+          "page": 132
+        },
+        {
+          "n": 3,
+          "text": "Where an authority reverses a toll, import the reversal rather than deleting the original.",
+          "page": 132
+        },
+        {
+          "n": 4,
+          "text": "Never delete an imported transaction. The batch it came in is a record of what the authority said.",
+          "page": 132
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Working the Unmatched",
+      "page": 132,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Unmatched transactions are the work. A queue of them, oldest first, is the screen that makes this feature earn its keep.",
+          "page": 132
+        },
+        {
+          "n": 2,
+          "text": "Common causes: a toll during a gap between trips, a car moved without a trip recorded, a tag on a car sold months ago.",
+          "page": 132
+        },
+        {
+          "n": 3,
+          "text": "Each of those is worth knowing about. The unmatched queue is a fleet diagnostic as much as a billing one.",
+          "page": 132
+        },
+        {
+          "n": 4,
+          "text": "A transaction may be matched manually where the automatic match failed but a person can see the answer.",
+          "page": 132
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "Every imported transaction records its source and batch.",
+      "page": 133,
+      "rule_id": "10.5-R01"
+    },
+    {
+      "n": 2,
+      "text": "Duplicates are prevented on authority, tag, and timestamp.",
+      "page": 133,
+      "rule_id": "10.5-R02"
+    },
+    {
+      "n": 3,
+      "text": "A transaction whose tag resolves to no vehicle is imported unmatched, never discarded.",
+      "page": 133,
+      "rule_id": "10.5-R03"
+    },
+    {
+      "n": 4,
+      "text": "Matching uses actual trip times, never reservation times.",
+      "page": 133,
+      "rule_id": "10.5-R04"
+    },
+    {
+      "n": 5,
+      "text": "Every toll is captured individually and that list never collapses.",
+      "page": 133,
+      "rule_id": "10.5-R05"
+    },
+    {
+      "n": 6,
+      "text": "Billing is aggregate: a trip\u2019s matched tolls are summed into one member charge, never one charge per toll.",
+      "page": 133,
+      "rule_id": "10.5-R06"
+    },
+    {
+      "n": 7,
+      "text": "Every toll in a billed group records the charge it was billed under.",
+      "page": 133,
+      "rule_id": "10.5-R07"
+    },
+    {
+      "n": 8,
+      "text": "Excluded and Disputed tolls are left out of the sum.",
+      "page": 133,
+      "rule_id": "10.5-R08"
+    },
+    {
+      "n": 9,
+      "text": "Excluded means the club has decided it is not a member\u2019s to pay; disputed means a member is contesting it.",
+      "page": 133,
+      "rule_id": "10.5-R09"
+    },
+    {
+      "n": 10,
+      "text": "Toll authorities are per region and imports arrive on whatever cadence each supports; no fixed schedule is assumed.",
+      "page": 133,
+      "rule_id": "10.5-R10"
+    },
+    {
+      "n": 11,
+      "text": "A toll inside a service or internal trip is the club\u2019s cost.",
+      "page": 133,
+      "rule_id": "10.5-R11"
+    },
+    {
+      "n": 12,
+      "text": "The imported amount is what the authority charged; any markup lives in the charge.",
+      "page": 133,
+      "rule_id": "10.5-R12"
+    },
+    {
+      "n": 13,
+      "text": "A disputed toll is held for review rather than voided automatically.",
+      "page": 133,
+      "rule_id": "10.5-R13"
+    },
+    {
+      "n": 14,
+      "text": "A reversal is imported; the original is never deleted.",
+      "page": 133,
+      "rule_id": "10.5-R14"
+    },
+    {
+      "n": 15,
+      "text": "No imported transaction is ever deleted.",
+      "page": 133,
+      "rule_id": "10.5-R15"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A toll two minutes after check-in. Outside the trip, so unmatched. Usually the member driving away from the branch in their own car, and usually the club\u2019s to absorb, but a person should decide.",
+      "page": 133
+    },
+    {
+      "n": 2,
+      "text": "A toll during a gap between two member trips. The club moved the car. Unmatched, surfaced, and almost always a club cost.",
+      "page": 133
+    },
+    {
+      "n": 3,
+      "text": "A tag on a car the club sold. Should not happen and does. The unmatched queue is how it is discovered, and the answer is to return the tag.",
+      "page": 133
+    },
+    {
+      "n": 4,
+      "text": "A member disputing a toll they did incur. Disputed, reviewed, and either upheld or written off. The transaction stays either way.",
+      "page": 133
+    },
+    {
+      "n": 5,
+      "text": "A batch imported twice. Deduplication catches it. Without the check, every member is charged twice and the club finds out from complaints.",
+      "page": 133
+    },
+    {
+      "n": 6,
+      "text": "A toll on a shared package. Charged to the member who drove, which is the participant on the trip, not necessarily the primary.",
+      "page": 133
+    },
+    {
+      "n": 7,
+      "text": "An authority reversing a toll months later. Imported as its own transaction and reconciled against the original.",
+      "page": 133
+    },
+    {
+      "n": 8,
+      "text": "Tolls arriving after a member has left the club. The charge is still theirs and the club decides whether to pursue it. The record does not become somebody else\u2019s.",
+      "page": 133
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Capture individually, bill in aggregate. These pull in opposite directions and both are right: the detail is the record, the charge is what a member reads. One charge per toll produces a statement nobody can use; one row per charge destroys the ability to answer which gantry.",
+      "page": 134
+    },
+    {
+      "n": 2,
+      "text": "Deduplicate on import. Authority, tag, and timestamp. A double import charges every member twice and the club hears about it from members rather than from the system.",
+      "page": 134
+    },
+    {
+      "n": 3,
+      "text": "Import first, match second. Two separate steps. Combining them means a matching failure loses the transaction, which is the one thing that must not happen.",
+      "page": 134
+    },
+    {
+      "n": 4,
+      "text": "Match on actual times. Reservation times would charge a member for a toll incurred before they had the car.",
+      "page": 134
+    },
+    {
+      "n": 5,
+      "text": "Never discard an unresolvable row. An unrecognised tag is information. Import it unmatched and let somebody look.",
+      "page": 134
+    },
+    {
+      "n": 6,
+      "text": "Keep the authority amount pure. Whatever the club adds belongs in the charge. Mixing them makes reconciliation against the authority impossible.",
+      "page": 134
+    },
+    {
+      "n": 7,
+      "text": "The unmatched queue is a feature. Build it as a working screen rather than an error log, because it is where cars moved without trips and tags on sold cars get discovered.",
+      "page": 134
+    },
+    {
+      "n": 8,
+      "text": "Never delete. Reversals are transactions. The batch record is what lets a bad import be unwound.",
+      "page": 134
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Import",
+      "text": "Every imported transaction records its source and batch.",
+      "page": 134,
+      "item_id": "10.5-C01",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Import",
+      "text": "Importing the same batch twice creates no duplicates.",
+      "page": 134,
+      "item_id": "10.5-C02",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Import",
+      "text": "A tag resolving to no vehicle is imported unmatched.",
+      "page": 134,
+      "item_id": "10.5-C03",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Import",
+      "text": "Transactions are created with a status of Unmatched.",
+      "page": 134,
+      "item_id": "10.5-C04",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Matching",
+      "text": "A toll inside a member trip window is matched to that trip.",
+      "page": 134,
+      "item_id": "10.5-C05",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Matching",
+      "text": "Matching uses actual trip times rather than reservation times.",
+      "page": 135,
+      "item_id": "10.5-C06",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Matching",
+      "text": "A toll inside a service trip is matched and raises no member charge.",
+      "page": 135,
+      "item_id": "10.5-C07",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Matching",
+      "text": "A toll outside every trip stays unmatched and appears in the queue.",
+      "page": 135,
+      "item_id": "10.5-C08",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Matching",
+      "text": "A transaction can be matched manually.",
+      "page": 135,
+      "item_id": "10.5-C09",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "A trip with several matched tolls produces one member charge for their total.",
+      "page": 135,
+      "item_id": "10.5-C10",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "Every toll in that group records the same member_charge_id.",
+      "page": 135,
+      "item_id": "10.5-C11",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "The single charge unfolds back into the individual toll events.",
+      "page": 135,
+      "item_id": "10.5-C12",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "An excluded toll is not included in the billed total.",
+      "page": 135,
+      "item_id": "10.5-C13",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "A disputed toll is not included in the billed total.",
+      "page": 135,
+      "item_id": "10.5-C14",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "A toll marked Excluded is distinguishable from one marked Disputed.",
+      "page": 135,
+      "item_id": "10.5-C15",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "The charge description names the authority, place, and date.",
+      "page": 135,
+      "item_id": "10.5-C16",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "The imported amount is unchanged by any club markup.",
+      "page": 135,
+      "item_id": "10.5-C17",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "A disputed toll holds the charge rather than voiding it.",
+      "page": 135,
+      "item_id": "10.5-C18",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "An upheld dispute voids the charge with a reason and keeps the transaction.",
+      "page": 135,
+      "item_id": "10.5-C19",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "A reversal is imported as its own transaction.",
+      "page": 135,
+      "item_id": "10.5-C20",
+      "guide_id": "10.5"
+    },
+    {
+      "group": "Charging and Disputes",
+      "text": "No imported transaction can be deleted.",
+      "page": 135,
+      "item_id": "10.5-C21",
+      "guide_id": "10.5"
+    }
+  ],
+  "checklist_count": 21
+}

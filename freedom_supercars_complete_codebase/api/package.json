@@ -1,0 +1,32 @@
+{
+  "name": "freedom-supercars-api",
+  "version": "1.0.0",
+  "description": "Freedom Supercars - members' club REST API",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.32.1",
+    "cors": "2.8.5",
+    "express": "4.21.2",
+    "express-async-errors": "3.1.1",
+    "express-rate-limit": "7.5.0",
+    "helmet": "8.0.0",
+    "jsonwebtoken": "9.0.2",
+    "pg": "8.13.1",
+    "pino": "9.5.0",
+    "pino-http": "10.3.0",
+    "zod": "3.24.1",
+    "@faker-js/faker": "9.3.0"
+  },
+  "devDependencies": {}
+}

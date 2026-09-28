@@ -1,0 +1,382 @@
+{
+  "guide_id": "10.4",
+  "chapter_no": 10,
+  "part_no": 3,
+  "title": "Service Trips",
+  "page_start": 125,
+  "page_end": 129,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 3 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 10, section HOW TRIPS ARE RECORDED, topic Service Trips",
+  "tables_referenced": [
+    "VEHICLE_TRIP",
+    "VEHICLE_TRIP_SERVICE"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "Cars go out for reasons that have nothing to do with a member. They go to a detailer, to a body shop,\nfor tires, for a service interval. Those movements are trips too, and the club needs them recorded for\nthe same reasons: mileage, custody, cost, and who has the car.\nThis guide covers the service companion to a trip: which vendor, what work, what it cost, and who\npays.\nThe point worth carrying: a service trip shares the entire trip machinery and none of the member\nmachinery. Same odometer readings, same event log, same custody. No package, no points, no\nallowance.\nPairs with How It Works chapter 10, section HOW TRIPS ARE RECORDED, topic Service Trips.",
+    "schema_overview": "KEY COLUMNS ON VEHICLE_TRIP_SERVICE\n\nColumn                          Purpose\n\nvendor_id                       Who performed the work.\n\nservice_category_code,\n                                What kind of work, at two levels.\nservice_type_code\n\nservice_reason_code             Why: scheduled, damage, member request, inspection finding.\n\nservice_cost                    What the vendor charged the club.\n\nbilled_member_id,\nbilled_vehicle_partner_id,      Who is being recharged, and how much.\nbilled_amount\n\n                                Whether the vehicle partner earns for this trip. One answer governing three\n                                things: the miles, the availability days, and any minimum guarantee. It lives on\nvehicle_trip.pay_vop_use\n                                the trip rather than here, because the same question applies to every kind of trip.\n                                See the Vehicle Owner Program chapter.\n\nwarranty_claim_reference        Where the work went on a warranty claim.\n\nservice_notes                   What was actually done.\n\n\nThe billing columns are the interesting part. Most service is the club\u2019s cost. Some is recharged to a\nmember, where they caused it. Some belongs to a vehicle partner, where the club does not own the\ncar.",
+    "implementation_workflow": "1) Creating a Service Trip\n    1. A service trip starts from a service reservation, which blocks the car on the same calendar as\n       everything else. See the Reservations chapter.\n    2. At checkout, open the trip and create the service companion rather than the member one.\n\n    3. Record the vendor, the category, the type, and the reason. All four, because a report of what\n       the fleet cost by reason is one of the more useful things this record produces.\n    4. Capture odometer and fuel exactly as for a member trip. The car is out and the mileage\n       counts.\n    5. counts_toward_limits does not apply, because there is no member.\n\n2) Recording the Work and the Cost\n    1. Record service_cost when the vendor invoices, which is often after the car is back.\n    2. A service trip may close before its cost is known. That is normal and the record should not\n       require the figure to close.\n    3. Use service_notes for what was done. It is read later by whoever wonders why a car was off\n       the road for a week.\n    4. Where the work went on warranty, record the claim reference. A warranty claim with no\n       reference is very hard to chase.\n\n3) Deciding Who Pays\n    1. By default the club pays. Leave the billing columns empty.\n    2. Where a member caused the damage, set billed_member_id and billed_amount, and raise a\n       member charge. The charge is the member-facing record; this is the operational one. See the\n       Member Management chapter.\n    3. Where the car belongs to a vehicle partner, set billed_vehicle_partner_id and billed_amount.\n       Whether the club or the owner bears a given cost is a term of the owner program.\n    4. billed_amount need not equal service_cost. A club absorbing half a repair is a common and\n       deliberate decision, and the two figures side by side record it.\n    5. Never set both a billed member and a billed partner. If a cost is genuinely split, it is two\n       records or a decision that has not been made.\n\n4) Mileage on a Service Trip\n    1. Miles driven on a service trip are the club\u2019s, not any member\u2019s. They never reach a member\n       allowance.\n    2. Where the car belongs to a vehicle partner, the trip\u2019s pay_vop_use decides whether the\n       partner earns for this time - the miles, the availability days and any guarantee all follow that\n       single answer. It is not derived from the service reason and not set on this form: a review task\n       is raised when the trip is created and somebody answers it within ten days. See the Vehicle\n       Owner Program chapter.\n    3. The odometer readings still go into the log, because the car\u2019s mileage history must be\n       continuous whoever was driving.\nOVERDUE IS DERIVED, NEVER STORED. A trip is overdue when the clock has passed the moment\nit was expected back, and that is computed rather than written: nothing has to set it, nothing can leave\nit stale, and it needs no value in any status list. It is deliberately not a reservation status and not a\nvehicle condition, because a car can be checked out and overdue at the same time, and a status\nforced to carry both would answer neither. The same derivation serves a member trip past its\nscheduled return, a service trip past its expected duration, a transfer past its expected arrival, and a\ntask past its due date - one idea in four places.\nCrossing the line is an event, not only a display. When a trip first becomes overdue an automation\nfires once, writing a durable record of the moment with the hours by which it was late as they stood\nthen, and raising whatever task or notification that case calls for. The derived flag gives live visibility;\nthe event gives history and something to act on. Computing lateness at the time rather than\nrecomputing it later is the rule the task escalation log already follows.",
+    "rules_and_constraints": "    1. A service trip uses the trip core record and the service companion, never the member one.\n    2. A service trip has no package, no points, and no allowance.\n    3. Vendor, category, type, and reason are all recorded.\n    4. A service trip may close before its cost is known.\n    5. The club pays by default; billing columns are set only where a cost is recharged.\n    6. billed_amount may differ from service_cost, and both are kept.\n    7. A cost is never billed to both a member and a vehicle partner.\n    8. Service miles never reach a member allowance.\n    9. Odometer readings are logged as for any trip.",
+    "integration_and_edge_cases": "    1. A car damaged by a member and repaired weeks later. The service trip records the work;\n       the member charge records the recovery. Both point at the same damage and neither\n       duplicates the other.\n    2. A repair the club decides to absorb. service_cost recorded, billing columns empty. The\n       decision is visible because the cost is there and nobody was billed.\n    3. A partial recharge. billed_amount less than service_cost. Both figures stay, and the\n       difference is the goodwill.\n    4. A service trip still open when the invoice arrives. Record the cost against the trip whether\n       or not it has closed.\n    5. A warranty repair. Cost may be zero to the club, and the claim reference is what makes that\n       explicable.\n    6. A partner car serviced. Whether the owner pays and whether they are paid for the miles are\n       two separate questions with two separate columns.\n    7. A vendor collecting the car themselves. Still a trip, still odometer readings, and the vendor\n       rather than a staff member captured them.\n    8. A car moved between branches without any service. Not a service trip. That is an internal\n       trip, and using the service companion for it would put a vendor on a movement that had none.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                           Outcome\n\nService reservation checked out   Service trip opened with the vendor and work recorded.\n\nService trip closed               Vehicle status updated; inspection raised where the work warrants it.\n\nTrigger                            Outcome\n\nCost recorded with a billed\n                                   Member charge raised, attributed to the trip and the vehicle.\nmember\n\nCost recorded with a billed\n                                   Partner statement line raised. See the Vehicle Owner Program chapter.\npartner\n\nService trip open beyond its       Task opened for the vehicle service manager and the branch manager notified;\nexpected duration                  the trip reads overdue on the vehicle operations dashboard.\n\nService trip closed with no cost\n                                   Surfaced until the invoice arrives.\nrecorded\n\n\n\nReserved for the automations pass: how long an uncosted service trip is chased, which service\nreasons automatically raise a member charge, and THE EXPECTED DURATION OF A SERVICE\nVISIT - the point past which an open service trip is surfaced to the branch manager and vehicle\noperations. That is a SCHEDULED RULE reading the open trip, in the same shape as the vehicle\ndwell rule in the Vehicles chapter.",
+    "developer_notes": "    1. Same trip, different companion. Resist building a separate service trip structure. The\n       custody, odometer, and event machinery is identical and duplicating it guarantees the two drift.\n    2. Cost and billing are different columns for a reason. What the club paid and what it\n       recovered are separate facts, and the gap between them is a decision worth seeing.\n    3. Never both billing targets. A cost billed to a member and a partner at once is a data error,\n       not a split. Enforce it.\n    4. Cost can arrive late. Do not require it to close the trip, and do surface trips that closed without\n       one.\n    5. Service miles are club miles. They never touch a member allowance, and the member\n       companion does not exist on this trip to be reached by accident.\n    6. The reason code earns its place. Cost by reason across the fleet is the report this table is\n       really for.",
+    "testing_checklist": "Structure\n    \u2610 A service trip has a service companion and no member companion.\n    \u2610 A service trip records vendor, category, type, and reason.\n    \u2610 A service trip consumes no member points or allowance.\n    \u2610 Odometer readings on a service trip are logged as on any trip.\n\nCost and Billing\n    \u2610 A service trip closes without a cost recorded.\n    \u2610 A trip closed without a cost is surfaced.\n    \u2610 A cost recorded with a billed member raises a member charge.\n    \u2610 A cost recorded with a billed partner raises a partner statement line.\n    \u2610 Setting both a billed member and a billed partner is refused.\n    \u2610 A billed amount lower than the cost is permitted and both figures are retained.\n    \u2610 A warranty repair records its claim reference.\n\nBoundaries\n    \u2610 An internal branch transfer does not use the service companion.\n    \u2610 Service miles do not appear in any member allowance calculation.\n    \u2610 The owner-paid-miles flag is independent of who is billed for the work."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Creating a Service Trip",
+      "page": 125,
+      "steps": [
+        {
+          "n": 1,
+          "text": "A service trip starts from a service reservation, which blocks the car on the same calendar as everything else. See the Reservations chapter.",
+          "page": 125
+        },
+        {
+          "n": 2,
+          "text": "At checkout, open the trip and create the service companion rather than the member one.",
+          "page": 125
+        },
+        {
+          "n": 3,
+          "text": "Record the vendor, the category, the type, and the reason. All four, because a report of what the fleet cost by reason is one of the more useful things this record produces.",
+          "page": 126
+        },
+        {
+          "n": 4,
+          "text": "Capture odometer and fuel exactly as for a member trip. The car is out and the mileage counts.",
+          "page": 126
+        },
+        {
+          "n": 5,
+          "text": "counts_toward_limits does not apply, because there is no member.",
+          "page": 126
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Recording the Work and the Cost",
+      "page": 126,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Record service_cost when the vendor invoices, which is often after the car is back.",
+          "page": 126
+        },
+        {
+          "n": 2,
+          "text": "A service trip may close before its cost is known. That is normal and the record should not require the figure to close.",
+          "page": 126
+        },
+        {
+          "n": 3,
+          "text": "Use service_notes for what was done. It is read later by whoever wonders why a car was off the road for a week.",
+          "page": 126
+        },
+        {
+          "n": 4,
+          "text": "Where the work went on warranty, record the claim reference. A warranty claim with no reference is very hard to chase.",
+          "page": 126
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Deciding Who Pays",
+      "page": 126,
+      "steps": [
+        {
+          "n": 1,
+          "text": "By default the club pays. Leave the billing columns empty.",
+          "page": 126
+        },
+        {
+          "n": 2,
+          "text": "Where a member caused the damage, set billed_member_id and billed_amount, and raise a member charge. The charge is the member-facing record; this is the operational one. See the Member Management chapter.",
+          "page": 126
+        },
+        {
+          "n": 3,
+          "text": "Where the car belongs to a vehicle partner, set billed_vehicle_partner_id and billed_amount. Whether the club or the owner bears a given cost is a term of the owner program.",
+          "page": 126
+        },
+        {
+          "n": 4,
+          "text": "billed_amount need not equal service_cost. A club absorbing half a repair is a common and deliberate decision, and the two figures side by side record it.",
+          "page": 126
+        },
+        {
+          "n": 5,
+          "text": "Never set both a billed member and a billed partner. If a cost is genuinely split, it is two records or a decision that has not been made.",
+          "page": 126
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Mileage on a Service Trip",
+      "page": 126,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Miles driven on a service trip are the club\u2019s, not any member\u2019s. They never reach a member allowance.",
+          "page": 126
+        },
+        {
+          "n": 2,
+          "text": "Where the car belongs to a vehicle partner, the trip\u2019s pay_vop_use decides whether the partner earns for this time - the miles, the availability days and any guarantee all follow that single answer. It is not derived from the service reason and not set on this form: a review task is raised when the trip is created and somebody answers it within ten days. See the Vehicle Owner Program chapter.",
+          "page": 126
+        },
+        {
+          "n": 3,
+          "text": "The odometer readings still go into the log, because the car\u2019s mileage history must be continuous whoever was driving.",
+          "page": 126
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "A service trip uses the trip core record and the service companion, never the member one.",
+      "page": 127,
+      "rule_id": "10.4-R01"
+    },
+    {
+      "n": 2,
+      "text": "A service trip has no package, no points, and no allowance.",
+      "page": 127,
+      "rule_id": "10.4-R02"
+    },
+    {
+      "n": 3,
+      "text": "Vendor, category, type, and reason are all recorded.",
+      "page": 127,
+      "rule_id": "10.4-R03"
+    },
+    {
+      "n": 4,
+      "text": "A service trip may close before its cost is known.",
+      "page": 127,
+      "rule_id": "10.4-R04"
+    },
+    {
+      "n": 5,
+      "text": "The club pays by default; billing columns are set only where a cost is recharged.",
+      "page": 127,
+      "rule_id": "10.4-R05"
+    },
+    {
+      "n": 6,
+      "text": "billed_amount may differ from service_cost, and both are kept.",
+      "page": 127,
+      "rule_id": "10.4-R06"
+    },
+    {
+      "n": 7,
+      "text": "A cost is never billed to both a member and a vehicle partner.",
+      "page": 127,
+      "rule_id": "10.4-R07"
+    },
+    {
+      "n": 8,
+      "text": "Service miles never reach a member allowance.",
+      "page": 127,
+      "rule_id": "10.4-R08"
+    },
+    {
+      "n": 9,
+      "text": "Odometer readings are logged as for any trip.",
+      "page": 127,
+      "rule_id": "10.4-R09"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A car damaged by a member and repaired weeks later. The service trip records the work; the member charge records the recovery. Both point at the same damage and neither duplicates the other.",
+      "page": 127
+    },
+    {
+      "n": 2,
+      "text": "A repair the club decides to absorb. service_cost recorded, billing columns empty. The decision is visible because the cost is there and nobody was billed.",
+      "page": 127
+    },
+    {
+      "n": 3,
+      "text": "A partial recharge. billed_amount less than service_cost. Both figures stay, and the difference is the goodwill.",
+      "page": 127
+    },
+    {
+      "n": 4,
+      "text": "A service trip still open when the invoice arrives. Record the cost against the trip whether or not it has closed.",
+      "page": 127
+    },
+    {
+      "n": 5,
+      "text": "A warranty repair. Cost may be zero to the club, and the claim reference is what makes that explicable.",
+      "page": 127
+    },
+    {
+      "n": 6,
+      "text": "A partner car serviced. Whether the owner pays and whether they are paid for the miles are two separate questions with two separate columns.",
+      "page": 127
+    },
+    {
+      "n": 7,
+      "text": "A vendor collecting the car themselves. Still a trip, still odometer readings, and the vendor rather than a staff member captured them.",
+      "page": 127
+    },
+    {
+      "n": 8,
+      "text": "A car moved between branches without any service. Not a service trip. That is an internal trip, and using the service companion for it would put a vendor on a movement that had none.",
+      "page": 127
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Same trip, different companion. Resist building a separate service trip structure. The custody, odometer, and event machinery is identical and duplicating it guarantees the two drift.",
+      "page": 128
+    },
+    {
+      "n": 2,
+      "text": "Cost and billing are different columns for a reason. What the club paid and what it recovered are separate facts, and the gap between them is a decision worth seeing.",
+      "page": 128
+    },
+    {
+      "n": 3,
+      "text": "Never both billing targets. A cost billed to a member and a partner at once is a data error, not a split. Enforce it.",
+      "page": 128
+    },
+    {
+      "n": 4,
+      "text": "Cost can arrive late. Do not require it to close the trip, and do surface trips that closed without one.",
+      "page": 128
+    },
+    {
+      "n": 5,
+      "text": "Service miles are club miles. They never touch a member allowance, and the member companion does not exist on this trip to be reached by accident.",
+      "page": 128
+    },
+    {
+      "n": 6,
+      "text": "The reason code earns its place. Cost by reason across the fleet is the report this table is really for.",
+      "page": 128
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Structure",
+      "text": "A service trip has a service companion and no member companion.",
+      "page": 128,
+      "item_id": "10.4-C01",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Structure",
+      "text": "A service trip records vendor, category, type, and reason.",
+      "page": 128,
+      "item_id": "10.4-C02",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Structure",
+      "text": "A service trip consumes no member points or allowance.",
+      "page": 128,
+      "item_id": "10.4-C03",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Structure",
+      "text": "Odometer readings on a service trip are logged as on any trip.",
+      "page": 128,
+      "item_id": "10.4-C04",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Cost and Billing",
+      "text": "A service trip closes without a cost recorded.",
+      "page": 128,
+      "item_id": "10.4-C05",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Cost and Billing",
+      "text": "A trip closed without a cost is surfaced.",
+      "page": 128,
+      "item_id": "10.4-C06",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Cost and Billing",
+      "text": "A cost recorded with a billed member raises a member charge.",
+      "page": 128,
+      "item_id": "10.4-C07",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Cost and Billing",
+      "text": "A cost recorded with a billed partner raises a partner statement line.",
+      "page": 128,
+      "item_id": "10.4-C08",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Cost and Billing",
+      "text": "Setting both a billed member and a billed partner is refused.",
+      "page": 129,
+      "item_id": "10.4-C09",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Cost and Billing",
+      "text": "A billed amount lower than the cost is permitted and both figures are retained.",
+      "page": 129,
+      "item_id": "10.4-C10",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Cost and Billing",
+      "text": "A warranty repair records its claim reference.",
+      "page": 129,
+      "item_id": "10.4-C11",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Boundaries",
+      "text": "An internal branch transfer does not use the service companion.",
+      "page": 129,
+      "item_id": "10.4-C12",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Boundaries",
+      "text": "Service miles do not appear in any member allowance calculation.",
+      "page": 129,
+      "item_id": "10.4-C13",
+      "guide_id": "10.4"
+    },
+    {
+      "group": "Boundaries",
+      "text": "The owner-paid-miles flag is independent of who is billed for the work.",
+      "page": 129,
+      "item_id": "10.4-C14",
+      "guide_id": "10.4"
+    }
+  ],
+  "checklist_count": 14
+}

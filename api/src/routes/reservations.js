@@ -14,6 +14,7 @@ import {
   checkVehicleOverlap,
   generateConfirmationCode,
 } from '../services/reservations.js';
+import { checkoutTrip, checkinTrip } from '../services/trips.js';
 
 export const reservationsRouter = Router();
 
@@ -515,6 +516,80 @@ reservationsRouter.post('/:id/return', async (req, res) => {
     return res1.rows[0];
   });
   res.json({ reservation: result });
+});
+
+// POST /v1/reservations/:id/checkout - Trip checkout with odometer capture & rate freeze (Guide 10.1)
+reservationsRouter.post('/:id/checkout', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const schema = z.object({
+    starting_odometer: z.number().nonnegative().optional(),
+    startingOdometer: z.number().nonnegative().optional(),
+    fuel_start_percent: z.number().min(0).max(100).default(100).optional(),
+    fuelStartPercent: z.number().min(0).max(100).default(100).optional(),
+    start_time_actual: z.string().datetime({ offset: true }).optional(),
+    startTimeActual: z.string().datetime({ offset: true }).optional(),
+    start_type: z.string().max(20).default('Pickup').optional(),
+    startType: z.string().max(20).default('Pickup').optional(),
+  });
+  const data = schema.parse(req.body);
+  const startingOdometer = data.starting_odometer ?? data.startingOdometer;
+  if (startingOdometer == null) throw new HttpError(400, 'starting_odometer is required');
+
+  const result = await withTransaction(async (client) => {
+    return await checkoutTrip(client, {
+      reservationId: id,
+      startingOdometer,
+      fuelStartPercent: data.fuel_start_percent ?? data.fuelStartPercent ?? 100,
+      startTimeActual: data.start_time_actual || data.startTimeActual,
+      startType: data.start_type || data.startType || 'Pickup',
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.status(201).json({ trip: result });
+});
+
+// POST /v1/reservations/:id/checkin - Trip checkin with settlement & ledger debit (Guide 10.2)
+reservationsRouter.post('/:id/checkin', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const schema = z.object({
+    closing_odometer: z.number().nonnegative().optional(),
+    closingOdometer: z.number().nonnegative().optional(),
+    fuel_end_percent: z.number().min(0).max(100).default(100).optional(),
+    fuelEndPercent: z.number().min(0).max(100).default(100).optional(),
+    end_time_actual: z.string().datetime({ offset: true }).optional(),
+    endTimeActual: z.string().datetime({ offset: true }).optional(),
+    end_type: z.string().max(20).default('Dropoff').optional(),
+    endType: z.string().max(20).default('Dropoff').optional(),
+    notes: z.string().max(1000).optional(),
+  });
+  const data = schema.parse(req.body);
+  const closingOdometer = data.closing_odometer ?? data.closingOdometer;
+  if (closingOdometer == null) throw new HttpError(400, 'closing_odometer is required');
+
+  const result = await withTransaction(async (client) => {
+    // Find active trip for this reservation
+    const tripLookup = await client.query(
+      `SELECT vehicle_trip_id FROM fs.vehicle_trip WHERE vehicle_reservation_id = $1 AND end_time_actual IS NULL`,
+      [id]
+    );
+    if (tripLookup.rowCount === 0) {
+      throw new HttpError(404, `No active open trip found for reservation ${id}`);
+    }
+    const tripId = tripLookup.rows[0].vehicle_trip_id;
+
+    return await checkinTrip(client, {
+      tripId,
+      closingOdometer,
+      fuelEndPercent: data.fuel_end_percent ?? data.fuelEndPercent ?? 100,
+      endTimeActual: data.end_time_actual || data.endTimeActual,
+      endType: data.end_type || data.endType || 'Dropoff',
+      notes: data.notes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ trip: result });
 });
 
 // GET /v1/reservations/_/upcoming

@@ -1,0 +1,572 @@
+{
+  "guide_id": "10.2",
+  "chapter_no": 10,
+  "part_no": 3,
+  "title": "Trip Settlement and Point Calculation",
+  "page_start": 117,
+  "page_end": 122,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 3 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 10, section HOW POINT CALCULATIONS WORK",
+  "tables_referenced": [
+    "MEMBERSHIP_LEVEL_PRICING",
+    "MEMBER_CHARGE",
+    "VEHICLE_RESERVATION"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "Settlement is where a trip becomes a number. The member is charged for the days they had the car\nand the miles they drove beyond their allowance, and that charge posts to their points ledger.\nThis guide covers the calculation: what is counted, from which snapshot, in what order, and how the\nresult is recorded so that it can be explained years later.\nThe rule that governs it, and the one just settled: a trip settles once, at its end, and its cost never\nchanges. Credits, including a free-pass weekend, post separately against the member rather than\nreducing the trip. Nothing is ever repriced.\nPairs with How It Works chapter 10, section HOW POINT CALCULATIONS WORK.",
+    "schema_overview": "WHAT SETTLEMENT READS AND WRITES\n\nColumn                           Purpose\n\nweekday_count_actual,\n                                 How many of each the trip actually was.\nweekend_count_actual\n\nvehicle_tier_snapshot            The tier at checkout.\n\nweekday_point_value_snapshot,\n                                 What each cost, frozen at checkout.\nweekend_point_value_snapshot\n\nextra_mile_point_value_snapshot What an extra mile cost, frozen at checkout.\n\nincluded_miles_snapshot          The allowance for this trip, computed at checkout.\n\noverage_miles_snapshot           Miles beyond the allowance.\n\nbase_points                      Days times their rates.\n\nextra_mileage_points             Overage times the extra-mile rate.\n\ntotal_points                     What the trip cost. Final.\n\ncredits_applied_points           Credits recorded against the trip for reference. See below.\n\ncalculation_version,\n                                 Which rules produced this, and the working.\ncalculation_detail",
+    "implementation_workflow": "1) Counting the Days\n    1. Count weekdays and weekends from the actual trip, not the reservation.\n    2. A weekend is one unit covering Friday afternoon to Monday morning, priced as a single\n       bundled figure. It is never three weekdays.\n    3. A member returning early on Sunday still had the weekend. The bundled rate applies in full.\n\n\n    4. A trip spanning a weekend and weekdays counts both: the weekend as one unit and the\n       weekdays individually.\n    5. Store the counts. They are what makes the arithmetic checkable afterwards.\n\n2) Computing the Base Charge\n    1. Multiply the weekday count by the weekday snapshot value, and the weekend count by the\n       weekend snapshot value. Add them.\n    2. Use the snapshots taken at checkout, never the current rate card. This is why the snapshots\n       exist.\n    3. Store the result as base_points.\n\n3) Computing the Mileage Charge\n    1. The allowance is the daily figure times the number of days the member had the car, with a\n       weekend counting as three days because mileage is per day even though the price is bundled.\n    2. Where a level uses the annual bucket structure instead of a daily allowance, the trip\u2019s miles\n       draw against the year\u2019s bucket rather than a per-trip figure. No current level offers it and the\n       structure must still be supported. See the Membership Plans chapter.\n    3. The allowance was snapshotted at checkout as included_miles_snapshot.\n    4. Overage is member miles less the allowance, floored at zero, stored as\n       overage_miles_snapshot.\n    5. Multiply overage by the extra-mile snapshot value. That value is fractional, so round once at\n       the end rather than at each step.\n    6. Store the result as extra_mileage_points.\n\nEXAMPLE \u2014 A WEEKEND TRIP SETTLING\n\nStep                          Figure           Source\n\nWeekend count                 1                Actual trip\n\nWeekend point value           35               Snapshot at checkout\n\nBase points                   35               1 times 35\n\nIncluded miles                300              100 per day times 3 weekend days\n\nMember miles                  412              Odometer less club-added miles\n\nOverage miles                 112              412 less 300\n\nExtra-mile value              0.250            Snapshot at checkout\n\nExtra mileage points          28               112 times 0.250\n\nTotal points                  63               35 plus 28\n\n\n\n4) Posting the Charge\n    1. total_points is base_points plus extra_mileage_points. That is what the trip cost.\n    2. Post it to the member\u2019s points ledger against the package the trip drew from.\n    3. Where the package is split, draw from the participant\u2019s share; where pooled, from the pool.\n       See the Member Management chapter.\n    4. A balance may go negative. The charge is applied in full regardless.\n    5. The trip is now settled and its cost never changes.\n    6. Where the vehicle belongs to a vehicle owner program partner, settlement also generates the\n       owner\u2019s member-trip mileage payout entry from the same chargeable miles that produced the\n       member\u2019s charge. That entry is one lane of the partner\u2019s mileage earnings, not the whole: the\n       partner is paid for the club\u2019s use of the car, so operational miles outside member trips earn\n       separately, and miles attached to a non-earning service trip do not earn at all (the VOP guide\n       owns that rule).\n    7. Deriving the owner\u2019s figure separately would let the two disagree, and the disagreement would\n       be invisible until a partner questioned a statement. In particular, recomputing from the\n       odometer alone would miss any goodwill adjustment the member received.\n    8. The payout calculation is specified in the Vehicle Owner Program chapter. What belongs here\n       is that settlement is the moment it is created, and that idempotency covers it: a re-submitted\n       trip produces no second payout entry.\n\n5) Credits Are Separate\n    1. A free-pass weekend does not reduce total_points. It posts as a credit against the member,\n       linked to the trip it is applied to, and that link may move to a more valuable trip later.\n    2. credits_applied_points records what credit is currently sitting on this trip, for display. It is a\n       reference, not a component of the charge.\n    3. Any other credit, whether goodwill or promotional, posts the same way: against the member,\n       not into the trip.\n    4. This is what allows a member to read a statement months later and find every trip figure\n       unchanged. See the Reservations chapter for the credit mechanics.\n\n6) Recording the Working\n    1. Idempotency. Settlement checks whether it has already posted before writing anything, so re-\n       running it is always safe. A settled trip re-submitted must produce no second charge, no\n       second payout entry, and no second ledger line.\n    2. Test for the existing settlement on the trip itself rather than for the ledger entry alone, because\n       a partial failure could leave one written and not the other.\n    3. Store calculation_version so the club knows which rules produced this figure, and so a trip\n       settled years ago is always understood under the rules that applied then.\n    4. Store calculation_detail as a complete trace: the resolved tier, the rates, the day counts, the\n       mileage arithmetic, the perks applied, and the totals. Anyone should be able to reconstruct the\n       settlement by hand and reach the same number.\n    5. Store calculation_detail as the working: the counts, the rates, the allowance, the overage, and\n       the arithmetic.\n    6. A member questioning a charge should be answerable from the record alone, without anybody\n       recomputing anything.\n    7. When the calculation rules change, the version changes. Old trips keep their version and their\n       figures.",
+    "rules_and_constraints": "    1. A trip settles once, at its end, and total_points never changes afterwards.\n    2. Day counts come from the actual trip, not the reservation - except under a granted courtesy.\n       Where the only difference between actual custody and the scheduled window is an early\n       pickup or late return granted on the reservation, settlement reads the scheduled window for\n       both days and mileage allowance: the member bought Friday to Monday and that is what\n       settles, with Thursday\u2019s driving drawing from the allowance they already hold.\n    3. Usage reporting reads real custody. A member who drove sixty-three billed days with two early\n       pickups genuinely drove sixty-five, and days-driven reporting counts them - a courtesy day is\n       identified by a grant on the reservation with the actual checkout date before the scheduled\n       start. A late return never adds a day.\n    4. A weekend is one bundled unit and is never three weekdays.\n    5. An early return still pays the full weekend rate.\n    6. Every rate used comes from the checkout snapshot, never the current card.\n    7. Mileage allowance counts three days for a weekend.\n    8. Settlement is idempotent: it checks for an existing settlement before writing anything.\n    9. Every settlement stores its calculation version and a complete trace of its working.\n    10. A level on the annual bucket structure draws trip miles against the year rather than a per-trip\n        allowance.\n    11. Overage is floored at zero.\n    12. Rounding happens once, at the end.\n    13. Credits post against the member and never reduce the trip figure.\n    14. Fuel bills itself: at trip close the platform computes the fuel consumed (fuel_start_percent to\n        fuel_end_percent, plus refuel events on the trip) and automatically posts a Fuel member\n        charge marked up at membership_level_pricing.fuel_markup_percent. Staff never key this\n        charge.\n    15. An accepted delivery quote posts itself the same way. Where\n        vehicle_reservation.delivery_quote_accepted_at is set, settlement posts a\n        MEMBER_CHARGE of type Delivery for vehicle_reservation.delivery_quote_amount, in\n        dollars. Post the accepted amount, never a recalculation - the miles and the rate row were\n        snapshotted at the quote, and a branch rate changed since then must not move a price the\n        member already agreed to. An empty acceptance stamp posts nothing, which is also the\n        correct outcome for a delivery the perk covered.\n    16. Settlement generates the partner\u2019s member-trip payout entry from the same chargeable miles\n        as the member charge (one lane of the partner\u2019s mileage earnings - see the VOP guide for the\n        full earning basis).\n    17. The calculation version and working are stored with every settled trip.",
+    "integration_and_edge_cases": "    1. A rate card replaced between checkout and check-in. Irrelevant. The snapshot was taken\n       at checkout and settlement uses it.\n    2. A weekend trip returned Sunday morning. Full weekend rate, three days of mileage\n       allowance. Both follow from the weekend being one unit.\n\n\n\n    3. A delivery or collection trip where the staff-driven leg is missing from the member\u2019s total. It\n       should not be missing: the showroom-to-showroom rule puts those miles on the member\u2019s tab\n       as extra_miles, and a delivery can correctly push a member over their allowance.\n    4. A member with no points left. The charge posts and the balance goes negative. Settlement\n       does not refuse.\n    5. A trip whose free-pass credit later moves away. The trip figure is unchanged; only the\n       credit moved. The member\u2019s balance adjusts, not the trip.\n    6. A calculation rule changing next year. New version, new trips. Old trips keep their version\n       and remain explicable.\n    7. A member disputing a charge. The stored working answers it: what was counted, at what\n       rate, against what allowance.\n    8. A trip on a corporate package. Charged to the company through the package. The\n       participant records who drove.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                         Outcome\n\nCheck-in completed              Settlement runs; counts, charges, and working recorded.\n\nSettlement complete             Points posted to the ledger; member notified with the figure.\n\nOverage charged                 Detail shown to the member: allowance, miles driven, and rate.\n\nFree-pass credit placed or\n                                Member balance adjusted; no trip figure changes.\nmoved\n\nBalance going negative          Surfaced to staff.\n\n\n\nReserved for the automations pass: settlement timing after check-in, the content of the member\nnotification, and whether a large overage is reviewed before posting.",
+    "developer_notes": "    1. Read the snapshot, never the card. Settlement must not touch a rate card. Every figure it\n       needs was frozen at checkout, and reading live would reprice completed trips whenever a card\n       changed.\n    2. A weekend is one unit for price and three days for mileage. Both halves are\n       counterintuitive and both are right. Treating a weekend as three weekdays for price, or one\n       day for mileage, are the two most likely bugs in this guide.\n    3. Round once. The extra-mile value is fractional. Rounding per mile produces a figure that\n       disagrees with the working by a point or two, which is exactly the kind of discrepancy a\n       member notices.\n    4. Credits are not components. total_points is base plus mileage. A credit posts elsewhere.\n       Subtracting it here would reintroduce the repricing problem the credit model exists to remove.\n\n\n    5. Store the working. It costs a text column and saves every dispute. Recomputing to answer a\n       question invites a different answer.\n    6. Version the calculation. When the rules change, old trips must keep producing their original\n       figures, and the version is how anybody knows which rules applied.\n    7. Never refuse on balance. Settlement records what happened. A member without points still\n       drove the car.",
+    "testing_checklist": "Counting\n    \u2610 Day counts come from the actual trip rather than the reservation.\n    \u2610 A weekend counts as one unit for pricing.\n    \u2610 A weekend counts as three days for mileage allowance.\n    \u2610 An early Sunday return still charges the full weekend rate.\n    \u2610 A mixed trip counts the weekend once and the weekdays individually.\n\nCalculation\n    \u2610 Base points use the checkout snapshot values.\n    \u2610 A rate card change between checkout and check-in does not affect the figure.\n    \u2610 Overage is member miles less allowance, floored at zero.\n    \u2610 Club-added miles do not contribute to overage.\n    \u2610 Rounding happens once, at the end.\n    \u2610 total_points equals base plus extra mileage.\n\nPosting and Credits\n    \u2610 The charge posts against the package the trip drew from.\n    \u2610 A split package draws from the participant\\u2019s share.\n    \u2610 A member with insufficient points is charged in full and goes negative.\n    \u2610 A free-pass credit does not reduce total_points.\n    \u2610 A credit moving away leaves the trip figure unchanged.\n    \u2610 A trip on a partner-owned car generates a payout entry from the same mileage figure as the\n      member charge.\n\nExplicability\n    \u2610 The calculation version is stored with every settled trip.\n    \u2610 The working is stored and answers a dispute without recomputation.\n    \u2610 A trip settled under an old version keeps its original figures."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Counting the Days",
+      "page": 117,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Count weekdays and weekends from the actual trip, not the reservation.",
+          "page": 117
+        },
+        {
+          "n": 2,
+          "text": "A weekend is one unit covering Friday afternoon to Monday morning, priced as a single bundled figure. It is never three weekdays.",
+          "page": 117
+        },
+        {
+          "n": 3,
+          "text": "A member returning early on Sunday still had the weekend. The bundled rate applies in full.",
+          "page": 117
+        },
+        {
+          "n": 4,
+          "text": "A trip spanning a weekend and weekdays counts both: the weekend as one unit and the weekdays individually.",
+          "page": 118
+        },
+        {
+          "n": 5,
+          "text": "Store the counts. They are what makes the arithmetic checkable afterwards.",
+          "page": 118
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Computing the Base Charge",
+      "page": 118,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Multiply the weekday count by the weekday snapshot value, and the weekend count by the weekend snapshot value. Add them.",
+          "page": 118
+        },
+        {
+          "n": 2,
+          "text": "Use the snapshots taken at checkout, never the current rate card. This is why the snapshots exist.",
+          "page": 118
+        },
+        {
+          "n": 3,
+          "text": "Store the result as base_points.",
+          "page": 118
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Computing the Mileage Charge",
+      "page": 118,
+      "steps": [
+        {
+          "n": 1,
+          "text": "The allowance is the daily figure times the number of days the member had the car, with a weekend counting as three days because mileage is per day even though the price is bundled.",
+          "page": 118
+        },
+        {
+          "n": 2,
+          "text": "Where a level uses the annual bucket structure instead of a daily allowance, the trip\u2019s miles draw against the year\u2019s bucket rather than a per-trip figure. No current level offers it and the structure must still be supported. See the Membership Plans chapter.",
+          "page": 118
+        },
+        {
+          "n": 3,
+          "text": "The allowance was snapshotted at checkout as included_miles_snapshot.",
+          "page": 118
+        },
+        {
+          "n": 4,
+          "text": "Overage is member miles less the allowance, floored at zero, stored as overage_miles_snapshot.",
+          "page": 118
+        },
+        {
+          "n": 5,
+          "text": "Multiply overage by the extra-mile snapshot value. That value is fractional, so round once at the end rather than at each step.",
+          "page": 118
+        },
+        {
+          "n": 6,
+          "text": "Store the result as extra_mileage_points.",
+          "page": 118
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Posting the Charge",
+      "page": 118,
+      "steps": [
+        {
+          "n": 1,
+          "text": "total_points is base_points plus extra_mileage_points. That is what the trip cost.",
+          "page": 118
+        },
+        {
+          "n": 2,
+          "text": "Post it to the member\u2019s points ledger against the package the trip drew from.",
+          "page": 118
+        },
+        {
+          "n": 3,
+          "text": "Where the package is split, draw from the participant\u2019s share; where pooled, from the pool. See the Member Management chapter.",
+          "page": 119
+        },
+        {
+          "n": 4,
+          "text": "A balance may go negative. The charge is applied in full regardless.",
+          "page": 119
+        },
+        {
+          "n": 5,
+          "text": "The trip is now settled and its cost never changes.",
+          "page": 119
+        },
+        {
+          "n": 6,
+          "text": "Where the vehicle belongs to a vehicle owner program partner, settlement also generates the owner\u2019s member-trip mileage payout entry from the same chargeable miles that produced the member\u2019s charge. That entry is one lane of the partner\u2019s mileage earnings, not the whole: the partner is paid for the club\u2019s use of the car, so operational miles outside member trips earn separately, and miles attached to a non-earning service trip do not earn at all (the VOP guide owns that rule).",
+          "page": 119
+        },
+        {
+          "n": 7,
+          "text": "Deriving the owner\u2019s figure separately would let the two disagree, and the disagreement would be invisible until a partner questioned a statement. In particular, recomputing from the odometer alone would miss any goodwill adjustment the member received.",
+          "page": 119
+        },
+        {
+          "n": 8,
+          "text": "The payout calculation is specified in the Vehicle Owner Program chapter. What belongs here is that settlement is the moment it is created, and that idempotency covers it: a re-submitted trip produces no second payout entry.",
+          "page": 119
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Credits Are Separate",
+      "page": 119,
+      "steps": [
+        {
+          "n": 1,
+          "text": "A free-pass weekend does not reduce total_points. It posts as a credit against the member, linked to the trip it is applied to, and that link may move to a more valuable trip later.",
+          "page": 119
+        },
+        {
+          "n": 2,
+          "text": "credits_applied_points records what credit is currently sitting on this trip, for display. It is a reference, not a component of the charge.",
+          "page": 119
+        },
+        {
+          "n": 3,
+          "text": "Any other credit, whether goodwill or promotional, posts the same way: against the member, not into the trip.",
+          "page": 119
+        },
+        {
+          "n": 4,
+          "text": "This is what allows a member to read a statement months later and find every trip figure unchanged. See the Reservations chapter for the credit mechanics.",
+          "page": 119
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "title": "Recording the Working",
+      "page": 119,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Idempotency. Settlement checks whether it has already posted before writing anything, so re- running it is always safe. A settled trip re-submitted must produce no second charge, no second payout entry, and no second ledger line.",
+          "page": 119
+        },
+        {
+          "n": 2,
+          "text": "Test for the existing settlement on the trip itself rather than for the ledger entry alone, because a partial failure could leave one written and not the other.",
+          "page": 119
+        },
+        {
+          "n": 3,
+          "text": "Store calculation_version so the club knows which rules produced this figure, and so a trip settled years ago is always understood under the rules that applied then.",
+          "page": 119
+        },
+        {
+          "n": 4,
+          "text": "Store calculation_detail as a complete trace: the resolved tier, the rates, the day counts, the mileage arithmetic, the perks applied, and the totals. Anyone should be able to reconstruct the settlement by hand and reach the same number.",
+          "page": 119
+        },
+        {
+          "n": 5,
+          "text": "Store calculation_detail as the working: the counts, the rates, the allowance, the overage, and the arithmetic.",
+          "page": 119
+        },
+        {
+          "n": 6,
+          "text": "A member questioning a charge should be answerable from the record alone, without anybody recomputing anything.",
+          "page": 119
+        },
+        {
+          "n": 7,
+          "text": "When the calculation rules change, the version changes. Old trips keep their version and their figures.",
+          "page": 119
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "A trip settles once, at its end, and total_points never changes afterwards.",
+      "page": 120,
+      "rule_id": "10.2-R01"
+    },
+    {
+      "n": 2,
+      "text": "Day counts come from the actual trip, not the reservation - except under a granted courtesy. Where the only difference between actual custody and the scheduled window is an early pickup or late return granted on the reservation, settlement reads the scheduled window for both days and mileage allowance: the member bought Friday to Monday and that is what settles, with Thursday\u2019s driving drawing from the allowance they already hold.",
+      "page": 120,
+      "rule_id": "10.2-R02"
+    },
+    {
+      "n": 3,
+      "text": "Usage reporting reads real custody. A member who drove sixty-three billed days with two early pickups genuinely drove sixty-five, and days-driven reporting counts them - a courtesy day is identified by a grant on the reservation with the actual checkout date before the scheduled start. A late return never adds a day.",
+      "page": 120,
+      "rule_id": "10.2-R03"
+    },
+    {
+      "n": 4,
+      "text": "A weekend is one bundled unit and is never three weekdays.",
+      "page": 120,
+      "rule_id": "10.2-R04"
+    },
+    {
+      "n": 5,
+      "text": "An early return still pays the full weekend rate.",
+      "page": 120,
+      "rule_id": "10.2-R05"
+    },
+    {
+      "n": 6,
+      "text": "Every rate used comes from the checkout snapshot, never the current card.",
+      "page": 120,
+      "rule_id": "10.2-R06"
+    },
+    {
+      "n": 7,
+      "text": "Mileage allowance counts three days for a weekend.",
+      "page": 120,
+      "rule_id": "10.2-R07"
+    },
+    {
+      "n": 8,
+      "text": "Settlement is idempotent: it checks for an existing settlement before writing anything.",
+      "page": 120,
+      "rule_id": "10.2-R08"
+    },
+    {
+      "n": 9,
+      "text": "Every settlement stores its calculation version and a complete trace of its working.",
+      "page": 120,
+      "rule_id": "10.2-R09"
+    },
+    {
+      "n": 10,
+      "text": "A level on the annual bucket structure draws trip miles against the year rather than a per-trip allowance.",
+      "page": 120,
+      "rule_id": "10.2-R10"
+    },
+    {
+      "n": 11,
+      "text": "Overage is floored at zero.",
+      "page": 120,
+      "rule_id": "10.2-R11"
+    },
+    {
+      "n": 12,
+      "text": "Rounding happens once, at the end.",
+      "page": 120,
+      "rule_id": "10.2-R12"
+    },
+    {
+      "n": 13,
+      "text": "Credits post against the member and never reduce the trip figure.",
+      "page": 120,
+      "rule_id": "10.2-R13"
+    },
+    {
+      "n": 14,
+      "text": "Fuel bills itself: at trip close the platform computes the fuel consumed (fuel_start_percent to fuel_end_percent, plus refuel events on the trip) and automatically posts a Fuel member charge marked up at membership_level_pricing.fuel_markup_percent. Staff never key this charge.",
+      "page": 120,
+      "rule_id": "10.2-R14"
+    },
+    {
+      "n": 15,
+      "text": "An accepted delivery quote posts itself the same way. Where vehicle_reservation.delivery_quote_accepted_at is set, settlement posts a MEMBER_CHARGE of type Delivery for vehicle_reservation.delivery_quote_amount, in dollars. Post the accepted amount, never a recalculation - the miles and the rate row were snapshotted at the quote, and a branch rate changed since then must not move a price the member already agreed to. An empty acceptance stamp posts nothing, which is also the correct outcome for a delivery the perk covered.",
+      "page": 120,
+      "rule_id": "10.2-R15"
+    },
+    {
+      "n": 16,
+      "text": "Settlement generates the partner\u2019s member-trip payout entry from the same chargeable miles as the member charge (one lane of the partner\u2019s mileage earnings - see the VOP guide for the full earning basis).",
+      "page": 120,
+      "rule_id": "10.2-R16"
+    },
+    {
+      "n": 17,
+      "text": "The calculation version and working are stored with every settled trip.",
+      "page": 120,
+      "rule_id": "10.2-R17"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A rate card replaced between checkout and check-in. Irrelevant. The snapshot was taken at checkout and settlement uses it.",
+      "page": 120
+    },
+    {
+      "n": 2,
+      "text": "A weekend trip returned Sunday morning. Full weekend rate, three days of mileage allowance. Both follow from the weekend being one unit.",
+      "page": 120
+    },
+    {
+      "n": 3,
+      "text": "A delivery or collection trip where the staff-driven leg is missing from the member\u2019s total. It should not be missing: the showroom-to-showroom rule puts those miles on the member\u2019s tab as extra_miles, and a delivery can correctly push a member over their allowance.",
+      "page": 121
+    },
+    {
+      "n": 4,
+      "text": "A member with no points left. The charge posts and the balance goes negative. Settlement does not refuse.",
+      "page": 121
+    },
+    {
+      "n": 5,
+      "text": "A trip whose free-pass credit later moves away. The trip figure is unchanged; only the credit moved. The member\u2019s balance adjusts, not the trip.",
+      "page": 121
+    },
+    {
+      "n": 6,
+      "text": "A calculation rule changing next year. New version, new trips. Old trips keep their version and remain explicable.",
+      "page": 121
+    },
+    {
+      "n": 7,
+      "text": "A member disputing a charge. The stored working answers it: what was counted, at what rate, against what allowance.",
+      "page": 121
+    },
+    {
+      "n": 8,
+      "text": "A trip on a corporate package. Charged to the company through the package. The participant records who drove.",
+      "page": 121
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Read the snapshot, never the card. Settlement must not touch a rate card. Every figure it needs was frozen at checkout, and reading live would reprice completed trips whenever a card changed.",
+      "page": 121
+    },
+    {
+      "n": 2,
+      "text": "A weekend is one unit for price and three days for mileage. Both halves are counterintuitive and both are right. Treating a weekend as three weekdays for price, or one day for mileage, are the two most likely bugs in this guide.",
+      "page": 121
+    },
+    {
+      "n": 3,
+      "text": "Round once. The extra-mile value is fractional. Rounding per mile produces a figure that disagrees with the working by a point or two, which is exactly the kind of discrepancy a member notices.",
+      "page": 121
+    },
+    {
+      "n": 4,
+      "text": "Credits are not components. total_points is base plus mileage. A credit posts elsewhere. Subtracting it here would reintroduce the repricing problem the credit model exists to remove.",
+      "page": 121
+    },
+    {
+      "n": 5,
+      "text": "Store the working. It costs a text column and saves every dispute. Recomputing to answer a question invites a different answer.",
+      "page": 122
+    },
+    {
+      "n": 6,
+      "text": "Version the calculation. When the rules change, old trips must keep producing their original figures, and the version is how anybody knows which rules applied.",
+      "page": 122
+    },
+    {
+      "n": 7,
+      "text": "Never refuse on balance. Settlement records what happened. A member without points still drove the car.",
+      "page": 122
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Counting",
+      "text": "Day counts come from the actual trip rather than the reservation.",
+      "page": 122,
+      "item_id": "10.2-C01",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Counting",
+      "text": "A weekend counts as one unit for pricing.",
+      "page": 122,
+      "item_id": "10.2-C02",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Counting",
+      "text": "A weekend counts as three days for mileage allowance.",
+      "page": 122,
+      "item_id": "10.2-C03",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Counting",
+      "text": "An early Sunday return still charges the full weekend rate.",
+      "page": 122,
+      "item_id": "10.2-C04",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Counting",
+      "text": "A mixed trip counts the weekend once and the weekdays individually.",
+      "page": 122,
+      "item_id": "10.2-C05",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Calculation",
+      "text": "Base points use the checkout snapshot values.",
+      "page": 122,
+      "item_id": "10.2-C06",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Calculation",
+      "text": "A rate card change between checkout and check-in does not affect the figure.",
+      "page": 122,
+      "item_id": "10.2-C07",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Calculation",
+      "text": "Overage is member miles less allowance, floored at zero.",
+      "page": 122,
+      "item_id": "10.2-C08",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Calculation",
+      "text": "Club-added miles do not contribute to overage.",
+      "page": 122,
+      "item_id": "10.2-C09",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Calculation",
+      "text": "Rounding happens once, at the end.",
+      "page": 122,
+      "item_id": "10.2-C10",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Calculation",
+      "text": "total_points equals base plus extra mileage.",
+      "page": 122,
+      "item_id": "10.2-C11",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Posting and Credits",
+      "text": "The charge posts against the package the trip drew from.",
+      "page": 122,
+      "item_id": "10.2-C12",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Posting and Credits",
+      "text": "A split package draws from the participant\\u2019s share.",
+      "page": 122,
+      "item_id": "10.2-C13",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Posting and Credits",
+      "text": "A member with insufficient points is charged in full and goes negative.",
+      "page": 122,
+      "item_id": "10.2-C14",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Posting and Credits",
+      "text": "A free-pass credit does not reduce total_points.",
+      "page": 122,
+      "item_id": "10.2-C15",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Posting and Credits",
+      "text": "A credit moving away leaves the trip figure unchanged.",
+      "page": 122,
+      "item_id": "10.2-C16",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Posting and Credits",
+      "text": "A trip on a partner-owned car generates a payout entry from the same mileage figure as the member charge.",
+      "page": 122,
+      "item_id": "10.2-C17",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Explicability",
+      "text": "The calculation version is stored with every settled trip.",
+      "page": 122,
+      "item_id": "10.2-C18",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Explicability",
+      "text": "The working is stored and answers a dispute without recomputation.",
+      "page": 122,
+      "item_id": "10.2-C19",
+      "guide_id": "10.2"
+    },
+    {
+      "group": "Explicability",
+      "text": "A trip settled under an old version keeps its original figures.",
+      "page": 122,
+      "item_id": "10.2-C20",
+      "guide_id": "10.2"
+    }
+  ],
+  "checklist_count": 20
+}

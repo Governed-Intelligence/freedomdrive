@@ -1,0 +1,183 @@
+{
+  "guide_id": "10.3",
+  "chapter_no": 10,
+  "part_no": 3,
+  "title": "Trip Stories",
+  "page_start": 123,
+  "page_end": 124,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 3 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 10, section HOW MEMBERS RECORD A TRIP",
+  "tables_referenced": [
+    "DOCUMENT",
+    "DOCUMENT_LINK",
+    "MEMBER_TRIP_STORY",
+    "MEMBER_TRIP_STORY_ANSWER",
+    "MEMBER_TRIP_STORY_PROMPT",
+    "VEHICLE_TRIP"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "After a trip, a member can write an account of it - answering questions the club sets about the car, the\ndrive and the company - and keep it with photographs from the trip. It belongs to the member. The\nclub stores it and does not read it as operational data.\nPairs with How It Works chapter 10, section HOW MEMBERS RECORD A TRIP.",
+    "schema_overview": "TABLES USED BY THIS GUIDE\n\nTable                             Role in this guide\n\nMEMBER_TRIP_STORY                 One story per trip: its title, introduction, and cover photograph.\n\nMEMBER_TRIP_STORY_PROMPT The questions, held as data so the club can change them.\n\n                                  One answer per prompt, keeping the member\u2019s words separately from any\nMEMBER_TRIP_STORY_ANSWER\n                                  assisted version.\n\nVEHICLE_TRIP                      The trip the story is about.\n\nDOCUMENT, DOCUMENT_LINK           Photographs, linked to the trip.",
+    "implementation_workflow": "    1. Offer the story once the trip is closed. A trip still open has no ending to write about.\n    2. Read the prompts from MEMBER_TRIP_STORY_PROMPT in sort_order, active only. Never\n       hard-code the questions: the club will change them, and the ones that produce good writing\n       are not known yet.\n    3. Save answers as the member types rather than on submit, stamping last_saved_at. A member\n       writing about a weekend should not lose it to a closed tab.\n    4. Store photographs as documents linked to the trip through DOCUMENT_LINK. The cover\n       photograph is a pointer on the story, not a separate upload.\n    5. Write answer_text only. assisted_text and assisted_at are reserved for a future integration;\n       nothing in this build writes them.",
+    "rules_and_constraints": "    1. One story per trip, enforced by a unique constraint on vehicle_trip_id.\n    2. The member who took the trip writes and reads their own story; that needs no permission.\n       Staff access to somebody else\u2019s story requires manage_member_story, which is held by\n       managers and above, and exists for support and for removing content where necessary rather\n       than for browsing.\n    3. A prompt that is deactivated stops being offered but its existing answers remain and still\n       display.\n    4. assisted_text never replaces answer_text. The member\u2019s own words are kept whatever else is\n       generated.\n\n    5. uses_assisted decides which version is displayed and defaults to the member\u2019s own.",
+    "integration_and_edge_cases": "    1. A trip cancelled or reversed after a story is written. The story stays with the trip record; do\n       not delete somebody\u2019s writing because an operational record changed.\n    2. A shared membership. The story belongs to the member who took the trip, not to everybody\n       on the package.\n    3. A member who answers nothing. An empty story is not created. A story exists once there is\n       something in it.\n    4. A prompt reworded after answers exist. The answers stay attached to the prompt they were\n       written for; the reworded question applies to stories written afterwards.",
+    "automations_and_notifications": "AUTOMATIONS IN THIS GUIDE\n\nTrigger                         Outcome\n\nTrip closed                     Member invited to write about the trip.\n\nStory left unfinished           Nothing. The club does not chase a member for a story.",
+    "developer_notes": "    1. Prompts are data, not columns. Ten fixed columns would have been simpler to write and\n       would need a migration every time the club changed a question.\n    2. The assisted fields exist now and are written later. Adding them at the start costs nothing\n       and means the integration, when it comes, does not touch the shape of the data.\n    3. Photographs link to the trip rather than to the story, so a member who never writes a story still\n       has their pictures.",
+    "testing_checklist": "Stories\n    \u2610 A story cannot be created for a trip that is still open.\n    \u2610 A second story for the same trip is refused.\n    \u2610 Deactivating a prompt removes it from new stories and leaves existing answers displayed.\n    \u2610 A member cannot open another member\u2019s story.\n    \u2610 Answers survive a closed browser without an explicit save."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Implementation Workflow",
+      "page": 123,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Offer the story once the trip is closed. A trip still open has no ending to write about.",
+          "page": 123
+        },
+        {
+          "n": 2,
+          "text": "Read the prompts from MEMBER_TRIP_STORY_PROMPT in sort_order, active only. Never hard-code the questions: the club will change them, and the ones that produce good writing are not known yet.",
+          "page": 123
+        },
+        {
+          "n": 3,
+          "text": "Save answers as the member types rather than on submit, stamping last_saved_at. A member writing about a weekend should not lose it to a closed tab.",
+          "page": 123
+        },
+        {
+          "n": 4,
+          "text": "Store photographs as documents linked to the trip through DOCUMENT_LINK. The cover photograph is a pointer on the story, not a separate upload.",
+          "page": 123
+        },
+        {
+          "n": 5,
+          "text": "Write answer_text only. assisted_text and assisted_at are reserved for a future integration; nothing in this build writes them.",
+          "page": 123
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "One story per trip, enforced by a unique constraint on vehicle_trip_id.",
+      "page": 123,
+      "rule_id": "10.3-R01"
+    },
+    {
+      "n": 2,
+      "text": "The member who took the trip writes and reads their own story; that needs no permission. Staff access to somebody else\u2019s story requires manage_member_story, which is held by managers and above, and exists for support and for removing content where necessary rather than for browsing.",
+      "page": 123,
+      "rule_id": "10.3-R02"
+    },
+    {
+      "n": 3,
+      "text": "A prompt that is deactivated stops being offered but its existing answers remain and still display.",
+      "page": 123,
+      "rule_id": "10.3-R03"
+    },
+    {
+      "n": 4,
+      "text": "assisted_text never replaces answer_text. The member\u2019s own words are kept whatever else is generated.",
+      "page": 123,
+      "rule_id": "10.3-R04"
+    },
+    {
+      "n": 5,
+      "text": "uses_assisted decides which version is displayed and defaults to the member\u2019s own.",
+      "page": 124,
+      "rule_id": "10.3-R05"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A trip cancelled or reversed after a story is written. The story stays with the trip record; do not delete somebody\u2019s writing because an operational record changed.",
+      "page": 124
+    },
+    {
+      "n": 2,
+      "text": "A shared membership. The story belongs to the member who took the trip, not to everybody on the package.",
+      "page": 124
+    },
+    {
+      "n": 3,
+      "text": "A member who answers nothing. An empty story is not created. A story exists once there is something in it.",
+      "page": 124
+    },
+    {
+      "n": 4,
+      "text": "A prompt reworded after answers exist. The answers stay attached to the prompt they were written for; the reworded question applies to stories written afterwards.",
+      "page": 124
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Prompts are data, not columns. Ten fixed columns would have been simpler to write and would need a migration every time the club changed a question.",
+      "page": 124
+    },
+    {
+      "n": 2,
+      "text": "The assisted fields exist now and are written later. Adding them at the start costs nothing and means the integration, when it comes, does not touch the shape of the data.",
+      "page": 124
+    },
+    {
+      "n": 3,
+      "text": "Photographs link to the trip rather than to the story, so a member who never writes a story still has their pictures.",
+      "page": 124
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Stories",
+      "text": "A story cannot be created for a trip that is still open.",
+      "page": 124,
+      "item_id": "10.3-C01",
+      "guide_id": "10.3"
+    },
+    {
+      "group": "Stories",
+      "text": "A second story for the same trip is refused.",
+      "page": 124,
+      "item_id": "10.3-C02",
+      "guide_id": "10.3"
+    },
+    {
+      "group": "Stories",
+      "text": "Deactivating a prompt removes it from new stories and leaves existing answers displayed.",
+      "page": 124,
+      "item_id": "10.3-C03",
+      "guide_id": "10.3"
+    },
+    {
+      "group": "Stories",
+      "text": "A member cannot open another member\u2019s story.",
+      "page": 124,
+      "item_id": "10.3-C04",
+      "guide_id": "10.3"
+    },
+    {
+      "group": "Stories",
+      "text": "Answers survive a closed browser without an explicit save.",
+      "page": 124,
+      "item_id": "10.3-C05",
+      "guide_id": "10.3"
+    }
+  ],
+  "checklist_count": 5
+}
