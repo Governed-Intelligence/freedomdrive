@@ -13,7 +13,7 @@ Fullstack members-club platform: Express API + Vite/React frontend.
 docker compose -f docker-compose.base44.yml up -d
 ```
 
-Services: `db` (Postgres 15), `migrate` (one-shot, runs all migrations), `seed` (one-shot, 20 demo members + 60 reservations), `api` (live reload via `node --watch`), `web` (Vite dev server on port 3000).
+Services: `db` (Postgres 15), `migrate` (one-shot, runs all migrations then seeds 20 demo members + 60 reservations), `api` (live reload via `node --watch`), `web` (Vite dev server on port 3000).
 
 ## Key setup details
 

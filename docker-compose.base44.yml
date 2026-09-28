@@ -19,7 +19,7 @@ services:
   migrate:
     image: node:20-bookworm-slim
     working_dir: /app
-    command: sh -c "npm install --no-audit --no-fund && node scripts/migrate.js"
+    command: sh -c "npm install --no-audit --no-fund && node scripts/migrate.js && node scripts/seed.js"
     environment:
       DATABASE_URL: postgresql://fs:fs@db:5432/freedom
     volumes:
@@ -27,18 +27,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
-  seed:
-    image: node:20-bookworm-slim
-    working_dir: /app
-    command: node scripts/seed.js
-    environment:
-      DATABASE_URL: postgresql://fs:fs@db:5432/freedom
-    volumes:
-      - ./api:/app
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
 
   api:
     image: node:20-bookworm-slim
