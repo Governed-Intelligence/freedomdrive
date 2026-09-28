@@ -1,0 +1,86 @@
+# Base44 development environment for Freedom Supercars
+# Runs the API and web frontend from source with live reload.
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: fs
+      POSTGRES_PASSWORD: fs
+      POSTGRES_DB: freedom
+    volumes:
+      - ./.base44/init-roles.sql:/docker-entrypoint-initdb.d/00-create-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fs -d freedom"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: on-failure
+
+  migrate:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && node scripts/migrate.js"
+    environment:
+      DATABASE_URL: postgresql://fs:fs@db:5432/freedom
+    volumes:
+      - ./api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  seed:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: node scripts/seed.js
+    environment:
+      DATABASE_URL: postgresql://fs:fs@db:5432/freedom
+    volumes:
+      - ./api:/app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  api:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && node --watch src/index.js"
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      DATABASE_URL: postgresql://fs:fs@db:5432/freedom
+    volumes:
+      - ./api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:8080/healthz').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: on-failure
+
+  web:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && npx vite --host 0.0.0.0 --port 5173"
+    environment:
+      API_PROXY_TARGET: http://api:8080
+      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: ${BASE44_PUBLIC_HOST_SUFFIX:-}
+    volumes:
+      - ./web:/app
+    ports:
+      - "3000:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:5173/').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: on-failure
