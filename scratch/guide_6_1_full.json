@@ -1,0 +1,677 @@
+{
+  "guide_id": "6.1",
+  "chapter_no": 6,
+  "part_no": 2,
+  "title": "Adding a Member",
+  "page_start": 6,
+  "page_end": 12,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 2 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 6, section HOW NEW MEMBERS ARE ADDED",
+  "tables_referenced": [
+    "MEMBER",
+    "MEMBERSHIP_LEVEL_BRANCH_AVAILABILITY",
+    "MEMBER_ADDRESS",
+    "MEMBER_BRANCH_HISTORY",
+    "MEMBER_EMAIL",
+    "MEMBER_INSURANCE_POLICY",
+    "MEMBER_PACKAGE",
+    "MEMBER_PAYMENT_SCHEDULE",
+    "MEMBER_PHONE",
+    "STATE_SELECT",
+    "USER"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "Adding a member is the most consequential creation flow in the platform. It writes a login account, a\nmember profile, contact details, insurance, and a membership package, and it commits the club to a\npayment schedule. Getting it wrong produces a duplicate identity, a member number that should\nnever have been issued, or a billing arrangement that does not match what was sold.\nThis guide covers the wizard that does it: what each step captures, what is written and when, how\nduplicates are caught, and the difference between saving a member and activating one.\nThe single most important idea is that saving and activating are separate events. A saved member\nhas an identity and can be worked on. An activated member has a number, a start date, and a bill.\nThe gap between them is deliberate, because the club sells memberships that do not begin the day\nthey are agreed.\nPairs with How It Works chapter 6, section HOW NEW MEMBERS ARE ADDED.",
+    "schema_overview": "TABLES WRITTEN BY THIS FLOW\n\nTable                             What the wizard writes\n\nUSER                              The login account, created with the member profile in one transaction.\n\nMEMBER                            The profile: names, license, date of birth, home branch, lifecycle status.\n\nMEMBER_PHONE                      One or more numbers, typed, with an SMS opt-in.\n\nMEMBER_EMAIL                      One or more addresses, typed, with three subscription flags.\n\nMEMBER_ADDRESS                    One or more addresses, typed by purpose, location, and dwelling style.\n\nMEMBER_INSURANCE_POLICY           The member’s policy, captured but never gating activation.\n\nMEMBER_PACKAGE                    The membership period, its level, and its terms.\n\nMEMBER_PAYMENT_SCHEDULE The dues arrangement agreed at activation.\n\nMEMBER_BRANCH_HISTORY             The opening home branch row.\n\n\nThe wizard is a single logical transaction across several screens. Nothing is half-written: either the\nmember exists with everything the step captured, or the step did not happen.",
+    "implementation_workflow": "1) Capturing the Person\n    1. Capture first_name, last_name, and optionally middle_name and preferred_name.\n       preferred_name is what greetings and displays use, falling back to first_name when it is\n       empty.\n    2. Capture date_of_birth. It is used for compliance and for age-related eligibility, and it is one of\n       the fields duplicate detection compares.\n\n\n    3. Capture the driving license: license_number, license_state resolving to STATE_SELECT, and\n       license_expires_on. A member who will drive needs all three.\n    4. Set home_branch_id. This is the location that serves the member, and it supplies the branch\n       segment of the member number when one is minted.\n    5. Set lifecycle_status to Pending. A member being entered is not yet active, whatever the intent.\n\n2) Checking for a Duplicate\n    1. Run duplicate detection before the profile is written, not after. A duplicate caught at save is a\n       duplicate the club has to merge.\n    2. Compare on normalized values: strip punctuation and case from names, reduce phone\n       numbers to digits, and compare addresses on street number and postal code rather than on\n       the whole string.\n    3. A match on driving license number, or on an email address, is strong enough on its own to\n       raise a flag.\n    4. A match on any two of last name, date of birth, phone number, and street address is also\n       enough to raise a flag.\n    5. Flag rather than block. Two people genuinely do share a name and a birthday, and the person\n       entering the record is better placed to judge than the system is.\n    6. Where the match is a former member, route to the rejoin path rather than creating a second\n       identity. Where it is a household member, offer the sharing arrangement instead.\n\nEXAMPLE — WHAT RAISES A DUPLICATE FLAG\n\nSignal                        On its own       Combined\n\nDriving license number        Flags            —\n\nEmail address                 Flags            —\n\nLast name                     No               Any two of these four flag\n\nDate of birth                 No               Any two of these four flag\n\nPhone number                  No               Any two of these four flag\n\nStreet address                No               Any two of these four flag\n\n\n\n3) Capturing Contact Details\n    1. Write MEMBER_PHONE rows with a type of Home, Work, Mobile, Assistant, Family, or\n       Emergency. Mark exactly one primary. Capture sms_opt_in per number, because consent\n       belongs to the number rather than to the person.\n    2. Write MEMBER_EMAIL rows with a type and the three subscription flags: account_opt_in,\n       vehicle_opt_in, and marketing_opt_in. At least one address must carry account and at least\n       one must carry vehicle; marketing is optional.\n    3. The email column is citext, so comparison is case-insensitive and no normalization is needed\n       on write.\n    4. Write MEMBER_ADDRESS rows typed by purpose, by location, and by dwelling style. The\n       style matters for delivery: a high-rise and a detached house need different arrangements.\n    5. Do not mark an address primary; no such flag exists. Where mailing and physical differ, both\n       are captured as separate rows rather than as two halves of one, and a reservation names the\n       address a delivery or collection uses.\n\n4) Capturing Insurance\n    1. Capture the policy and its coverages. The detail belongs to the insurance guide in group C of\n       this chapter.\n    2. Insurance never gates activation. A member can be activated, billed, and given a number\n       without a verified policy on file.\n    3. The layered model in full: missing insurance never blocks booking; a policy known to have\n       expired blocks new reservations until replaced (see the insurance guide); checkout always\n       requires current coverage.\n    4. What insurance gates is vehicle release. A member without current coverage cannot take a\n       car, and that check lives in the reservation flow.\n    5. This separation is deliberate and is easy to get backwards. Blocking activation on insurance\n       would stop the club billing a member who has agreed to join.\n\n5) Capturing the Membership\n    1. Write the MEMBER_PACKAGE row with its membership level, its start and end dates, and a\n       status of Draft. The wizard saves freely into Draft.\n    2. Only levels available at the enrolling branch may be offered. Availability is read from\n       MEMBERSHIP_LEVEL_BRANCH_AVAILABILITY, never from the access table.\n    3. Write MEMBER_PAYMENT_SCHEDULE from the level’s pricing at the enrolling branch,\n       effective on the enrollment date.\n    4. Dues doctrine applies without exception: no proration ever, always the first of the month,\n       twelve equal payments in twelve successive months, with month one paid at joining.\n    5. Sharing members and additional drivers are captured as participants. That structure belongs\n       to group B of this chapter.\n\n6) Saving Versus Activating\n    1. On save, the member exists with a member_id and a lifecycle_status of Pending. No member\n       number is minted and no member_since date is set.\n    2. Activation requires a payment arrangement in place and no outstanding hold. Insurance is not\n       a prerequisite.\n    3. On first activation, mint member_seq and member_number, set member_since, and move\n       lifecycle_status to Active. All four happen together or none of them do.\n    4. A member who is never activated keeps their member_id and never receives a number. This\n       is correct, and it is why the number sequence has permanent gaps.\n    5. An activation task is raised seven days ahead of the start date and is due on the start date.\n       Where a package is created inside that window, raise it immediately. Nothing activates\n       automatically; a person confirms.\n    6. If the planned start date is edited, move the task with it. A task due on a date that no longer\n       means anything sits overdue while the real start is still weeks away.\n\n\n\n    7. Activation sets the start date, in both directions. Late activation moves the start forward; early\n       activation moves it back to the activation date. The planned date is a plan and the moment of\n       activation is what governs.\n    8. The originally planned date is preserved in the package’s change history, so the difference\n       between what was intended and what happened stays answerable.\n    9. A gift set to start on a birthday is therefore activated on the birthday, never before, because\n       activating early would begin the year early.\n    10. Activation also posts any joining bonus onto the package and converts any tentative\n        reservations held against the member into confirmed ones. That conversion is what makes a\n        birthday delivery work: staff book it against the Pending member, and activation makes it real.\n\nEXAMPLE — WHAT EXISTS AT EACH STAGE\n\n                              Saved (Pending)   Activated\n\nmember_id                     Yes               Yes\n\nmember_number                 No                Yes, minted at first activation\n\nmember_since                  No                Yes\n\nlifecycle_status              Pending           Active\n\nPayment schedule              Written           Running\n\nCan take a vehicle            No                Only with current insurance",
+    "rules_and_constraints": "    1. The account and the member profile are created in one transaction.\n    2. MEMBER.user_id is unique; one login account carries at most one member profile.\n    3. Duplicate detection runs before the profile is written and flags rather than blocks.\n    4. A license or email match flags on its own; any two of last name, date of birth, phone, and\n       street address flag together.\n    5. At least one email address carries the account flag and at least one carries the vehicle flag.\n    6. Exactly one phone and exactly one email per member is marked primary - the number the club\n       calls first and the address a screen shows when it has room for one. The interface requires\n       one of each; the database enforces at most one, since no constraint can compel a row to\n       exist. Addresses carry no primary: a member keeps a home and an office and neither is more\n       correct, so the reservation names the address a delivery goes to rather than the member\n       record nominating one in advance.\n    7. Only membership levels available at the enrolling branch may be offered.\n    8. Insurance never gates activation and always gates vehicle release.\n    9. Activation requires a payment arrangement and no hold.\n    10. Activation sets the start date in both directions; the originally planned date is preserved in the\n        change history.\n    11. Activation posts any joining bonus and converts tentative reservations held against the\n        member.\n    12. The activation task is due on the start date and moves whenever that date is edited.\n    13. member_seq, member_number, and member_since are set at first activation and never\n        before.\n    14. Dues are never prorated, always fall on the first, and run as twelve equal payments.\n    15. A never-activated member holds an identity and no number.",
+    "integration_and_edge_cases": "    1. A former member rejoining. Duplicate detection should catch them. Route to the rejoin path,\n       which reuses the existing member record and its original number rather than creating a\n       second identity.\n    2. A member being added by someone at another branch. The enrolling branch decides\n       which levels are on offer and which prices apply. The member’s home branch may differ, and\n       that is a separate field.\n    3. A member who never activates. Legitimate. They hold an identity, appear in searches, and\n       have no number. Do not treat the missing number as an error.\n    4. A household sharing one email address. The uniqueness is on the login account, not on the\n       member email row, so two members may list the same address. Only one of them can use it to\n       sign in.\n    5. A member with no driving license. Possible where the membership is held by someone who\n       never drives, with an additional driver doing the driving. Do not require it.\n    6. Activation before the planned start date. The start moves back to the activation date, the\n       end date and payment schedule recompute, and the membership year begins now. Activating\n       a future-dated gift early is therefore a mistake rather than a convenience.\n    7. Activation after the start date. The start moves forward, and the end date and payment\n       schedule are recomputed, so the member receives their full year rather than losing the days\n       nobody used. Staff confirm rather than the system deciding.\n    8. A tentative reservation against a Pending member. Converts at activation. Where the\n       member never activates, the reservation falls with the enrollment.\n    9. A duplicate flag ignored deliberately. Two genuine people. Record that the flag was\n       reviewed, so the next person to notice does not investigate it again.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                            Outcome\n\nMember saved                       Login account created; invitation sent to the primary account-flagged address.\n\nDuplicate flag raised              Entry pauses for review; the matching records are shown side by side.\n\n                                   Activation task raised for staff, due on the start date. Nothing activates\nSeven days before the start date\n                                   automatically.\n\nPlanned start date edited          Activation task due date moves with it.\n\n\nTrigger                           Outcome\n\nFirst activation                  Member number and member_since minted; welcome correspondence sent.\n\nLate activation confirmed         Start date moved forward; end date and payment schedule recomputed.\n\nInsurance missing at activation   Member activated and billed; vehicle release blocked until coverage is on file.\n\n\nReserved for the automations pass: welcome correspondence content and routing, activation task\nassignment, and whether a duplicate flag notifies anyone beyond the person entering the record.",
+    "developer_notes": "    1. One transaction, several screens. The wizard spans steps but commits as a unit. A partial\n       write leaves a member the club cannot bill and cannot find.\n    2. Normalize before comparing. Duplicate detection on raw strings finds almost nothing. Strip\n       case and punctuation from names, reduce phones to digits, and compare addresses on\n       number and postal code.\n    3. Flag, never block. A blocking duplicate check will be worked around by entering a middle\n       initial, which produces exactly the duplicate it was meant to prevent.\n    4. Minting is atomic. member_seq, member_number, member_since, and the status change\n       happen together. A number issued without a status change is a number the club cannot\n       explain.\n    5. Never mint on save. The gap between a saved and an activated member is the reason the\n       number sequence has gaps, and those gaps are correct.\n    6. Insurance is not a gate here. Any code that refuses activation for missing insurance has\n       inverted the rule and will stop the club billing members who have agreed to join.\n    7. Availability, not access. Enrollment reads which levels may be sold at this branch. Reading\n       the access table instead offers levels the branch cannot sell.\n    8. citext on the email column. No lower-casing on write, and comparison is already case-\n       insensitive.",
+    "testing_checklist": "Creation\n    ☐ Saving a member writes one USER row and one MEMBER row, and rolling back either leaves\n      neither.\n    ☐ A second member profile cannot be created against a login account that already has one.\n    ☐ A saved member has a member_id, a Pending status, and no member number.\n    ☐ A license state not present in STATE_SELECT is rejected.\n\nDuplicate Detection\n    ☐ A matching driving license number raises a flag on its own.\n    ☐ A matching email address raises a flag on its own.\n    ☐ A matching last name alone does not raise a flag.\n    ☐ A matching last name and date of birth together raise a flag.\n    ☐ Names differing only by case or punctuation are treated as matching.\n    ☐ Phone numbers differing only by formatting are treated as matching.\n    ☐ A flagged entry can proceed once reviewed, and the review is recorded.\n    ☐ A match against a former member routes to the rejoin path.\n\nContact Details\n    ☐ A member cannot be saved without at least one account-flagged email address.\n    ☐ A member cannot be saved without at least one vehicle-flagged email address.\n    ☐ A second phone or email marked primary for the same member is rejected.\n    ☐ Two members may list the same email address.\n\nMembership and Activation\n    ☐ Only levels available at the enrolling branch appear in the picker.\n    ☐ The payment schedule is built from the level price at the enrolling branch.\n    ☐ Dues are twelve equal payments falling on the first, with no proration.\n    ☐ Activation without a payment arrangement is refused.\n    ☐ Activation without insurance succeeds.\n    ☐ Activation earlier than the planned start moves the start date to the activation date.\n    ☐ Activation later than the planned start moves the start date forward and recomputes the end\n      date.\n    ☐ The originally planned start date remains readable in the change history.\n    ☐ Editing the planned start date moves the activation task with it.\n    ☐ Activation posts the joining bonus onto the package.\n    ☐ Activation converts tentative reservations held against the member.\n    ☐ First activation mints member_seq, member_number, and member_since together.\n    ☐ A second activation does not mint a new number.\n    ☐ A never-activated member has no number and appears in searches.\n    ☐ Late activation moves the start date and recomputes the end date and schedule.\n    ☐ Early activation leaves a future start date unchanged."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Capturing the Person",
+      "page": 6,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Capture first_name, last_name, and optionally middle_name and preferred_name. preferred_name is what greetings and displays use, falling back to first_name when it is empty.",
+          "page": 6
+        },
+        {
+          "n": 2,
+          "text": "Capture date_of_birth. It is used for compliance and for age-related eligibility, and it is one of the fields duplicate detection compares.",
+          "page": 6
+        },
+        {
+          "n": 3,
+          "text": "Capture the driving license: license_number, license_state resolving to STATE_SELECT, and license_expires_on. A member who will drive needs all three.",
+          "page": 7
+        },
+        {
+          "n": 4,
+          "text": "Set home_branch_id. This is the location that serves the member, and it supplies the branch segment of the member number when one is minted.",
+          "page": 7
+        },
+        {
+          "n": 5,
+          "text": "Set lifecycle_status to Pending. A member being entered is not yet active, whatever the intent.",
+          "page": 7
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Checking for a Duplicate",
+      "page": 7,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Run duplicate detection before the profile is written, not after. A duplicate caught at save is a duplicate the club has to merge.",
+          "page": 7
+        },
+        {
+          "n": 2,
+          "text": "Compare on normalized values: strip punctuation and case from names, reduce phone numbers to digits, and compare addresses on street number and postal code rather than on the whole string.",
+          "page": 7
+        },
+        {
+          "n": 3,
+          "text": "A match on driving license number, or on an email address, is strong enough on its own to raise a flag.",
+          "page": 7
+        },
+        {
+          "n": 4,
+          "text": "A match on any two of last name, date of birth, phone number, and street address is also enough to raise a flag.",
+          "page": 7
+        },
+        {
+          "n": 5,
+          "text": "Flag rather than block. Two people genuinely do share a name and a birthday, and the person entering the record is better placed to judge than the system is.",
+          "page": 7
+        },
+        {
+          "n": 6,
+          "text": "Where the match is a former member, route to the rejoin path rather than creating a second identity. Where it is a household member, offer the sharing arrangement instead.",
+          "page": 7
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Capturing Contact Details",
+      "page": 7,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Write MEMBER_PHONE rows with a type of Home, Work, Mobile, Assistant, Family, or Emergency. Mark exactly one primary. Capture sms_opt_in per number, because consent belongs to the number rather than to the person.",
+          "page": 7
+        },
+        {
+          "n": 2,
+          "text": "Write MEMBER_EMAIL rows with a type and the three subscription flags: account_opt_in, vehicle_opt_in, and marketing_opt_in. At least one address must carry account and at least one must carry vehicle; marketing is optional.",
+          "page": 7
+        },
+        {
+          "n": 3,
+          "text": "The email column is citext, so comparison is case-insensitive and no normalization is needed on write.",
+          "page": 7
+        },
+        {
+          "n": 4,
+          "text": "Write MEMBER_ADDRESS rows typed by purpose, by location, and by dwelling style. The style matters for delivery: a high-rise and a detached house need different arrangements.",
+          "page": 7
+        },
+        {
+          "n": 5,
+          "text": "Do not mark an address primary; no such flag exists. Where mailing and physical differ, both are captured as separate rows rather than as two halves of one, and a reservation names the address a delivery or collection uses.",
+          "page": 8
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Capturing Insurance",
+      "page": 8,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Capture the policy and its coverages. The detail belongs to the insurance guide in group C of this chapter.",
+          "page": 8
+        },
+        {
+          "n": 2,
+          "text": "Insurance never gates activation. A member can be activated, billed, and given a number without a verified policy on file.",
+          "page": 8
+        },
+        {
+          "n": 3,
+          "text": "The layered model in full: missing insurance never blocks booking; a policy known to have expired blocks new reservations until replaced (see the insurance guide); checkout always requires current coverage.",
+          "page": 8
+        },
+        {
+          "n": 4,
+          "text": "What insurance gates is vehicle release. A member without current coverage cannot take a car, and that check lives in the reservation flow.",
+          "page": 8
+        },
+        {
+          "n": 5,
+          "text": "This separation is deliberate and is easy to get backwards. Blocking activation on insurance would stop the club billing a member who has agreed to join.",
+          "page": 8
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Capturing the Membership",
+      "page": 8,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Write the MEMBER_PACKAGE row with its membership level, its start and end dates, and a status of Draft. The wizard saves freely into Draft.",
+          "page": 8
+        },
+        {
+          "n": 2,
+          "text": "Only levels available at the enrolling branch may be offered. Availability is read from MEMBERSHIP_LEVEL_BRANCH_AVAILABILITY, never from the access table.",
+          "page": 8
+        },
+        {
+          "n": 3,
+          "text": "Write MEMBER_PAYMENT_SCHEDULE from the level’s pricing at the enrolling branch, effective on the enrollment date.",
+          "page": 8
+        },
+        {
+          "n": 4,
+          "text": "Dues doctrine applies without exception: no proration ever, always the first of the month, twelve equal payments in twelve successive months, with month one paid at joining.",
+          "page": 8
+        },
+        {
+          "n": 5,
+          "text": "Sharing members and additional drivers are captured as participants. That structure belongs to group B of this chapter.",
+          "page": 8
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "title": "Saving Versus Activating",
+      "page": 8,
+      "steps": [
+        {
+          "n": 1,
+          "text": "On save, the member exists with a member_id and a lifecycle_status of Pending. No member number is minted and no member_since date is set.",
+          "page": 8
+        },
+        {
+          "n": 2,
+          "text": "Activation requires a payment arrangement in place and no outstanding hold. Insurance is not a prerequisite.",
+          "page": 8
+        },
+        {
+          "n": 3,
+          "text": "On first activation, mint member_seq and member_number, set member_since, and move lifecycle_status to Active. All four happen together or none of them do.",
+          "page": 8
+        },
+        {
+          "n": 4,
+          "text": "A member who is never activated keeps their member_id and never receives a number. This is correct, and it is why the number sequence has permanent gaps.",
+          "page": 8
+        },
+        {
+          "n": 5,
+          "text": "An activation task is raised seven days ahead of the start date and is due on the start date. Where a package is created inside that window, raise it immediately. Nothing activates automatically; a person confirms.",
+          "page": 8
+        },
+        {
+          "n": 6,
+          "text": "If the planned start date is edited, move the task with it. A task due on a date that no longer means anything sits overdue while the real start is still weeks away.",
+          "page": 8
+        },
+        {
+          "n": 7,
+          "text": "Activation sets the start date, in both directions. Late activation moves the start forward; early activation moves it back to the activation date. The planned date is a plan and the moment of activation is what governs.",
+          "page": 9
+        },
+        {
+          "n": 8,
+          "text": "The originally planned date is preserved in the package’s change history, so the difference between what was intended and what happened stays answerable.",
+          "page": 9
+        },
+        {
+          "n": 9,
+          "text": "A gift set to start on a birthday is therefore activated on the birthday, never before, because activating early would begin the year early.",
+          "page": 9
+        },
+        {
+          "n": 10,
+          "text": "Activation also posts any joining bonus onto the package and converts any tentative reservations held against the member into confirmed ones. That conversion is what makes a birthday delivery work: staff book it against the Pending member, and activation makes it real. Saved (Pending) Activated",
+          "page": 9
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "The account and the member profile are created in one transaction.",
+      "page": 9,
+      "rule_id": "6.1-R01"
+    },
+    {
+      "n": 2,
+      "text": "MEMBER.user_id is unique; one login account carries at most one member profile.",
+      "page": 9,
+      "rule_id": "6.1-R02"
+    },
+    {
+      "n": 3,
+      "text": "Duplicate detection runs before the profile is written and flags rather than blocks.",
+      "page": 9,
+      "rule_id": "6.1-R03"
+    },
+    {
+      "n": 4,
+      "text": "A license or email match flags on its own; any two of last name, date of birth, phone, and street address flag together.",
+      "page": 9,
+      "rule_id": "6.1-R04"
+    },
+    {
+      "n": 5,
+      "text": "At least one email address carries the account flag and at least one carries the vehicle flag.",
+      "page": 9,
+      "rule_id": "6.1-R05"
+    },
+    {
+      "n": 6,
+      "text": "Exactly one phone and exactly one email per member is marked primary - the number the club calls first and the address a screen shows when it has room for one. The interface requires one of each; the database enforces at most one, since no constraint can compel a row to exist. Addresses carry no primary: a member keeps a home and an office and neither is more correct, so the reservation names the address a delivery goes to rather than the member record nominating one in advance.",
+      "page": 9,
+      "rule_id": "6.1-R06"
+    },
+    {
+      "n": 7,
+      "text": "Only membership levels available at the enrolling branch may be offered.",
+      "page": 9,
+      "rule_id": "6.1-R07"
+    },
+    {
+      "n": 8,
+      "text": "Insurance never gates activation and always gates vehicle release.",
+      "page": 9,
+      "rule_id": "6.1-R08"
+    },
+    {
+      "n": 9,
+      "text": "Activation requires a payment arrangement and no hold.",
+      "page": 9,
+      "rule_id": "6.1-R09"
+    },
+    {
+      "n": 10,
+      "text": "Activation sets the start date in both directions; the originally planned date is preserved in the change history.",
+      "page": 9,
+      "rule_id": "6.1-R10"
+    },
+    {
+      "n": 11,
+      "text": "Activation posts any joining bonus and converts tentative reservations held against the member.",
+      "page": 9,
+      "rule_id": "6.1-R11"
+    },
+    {
+      "n": 12,
+      "text": "The activation task is due on the start date and moves whenever that date is edited.",
+      "page": 10,
+      "rule_id": "6.1-R12"
+    },
+    {
+      "n": 13,
+      "text": "member_seq, member_number, and member_since are set at first activation and never before.",
+      "page": 10,
+      "rule_id": "6.1-R13"
+    },
+    {
+      "n": 14,
+      "text": "Dues are never prorated, always fall on the first, and run as twelve equal payments.",
+      "page": 10,
+      "rule_id": "6.1-R14"
+    },
+    {
+      "n": 15,
+      "text": "A never-activated member holds an identity and no number.",
+      "page": 10,
+      "rule_id": "6.1-R15"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A former member rejoining. Duplicate detection should catch them. Route to the rejoin path, which reuses the existing member record and its original number rather than creating a second identity.",
+      "page": 10
+    },
+    {
+      "n": 2,
+      "text": "A member being added by someone at another branch. The enrolling branch decides which levels are on offer and which prices apply. The member’s home branch may differ, and that is a separate field.",
+      "page": 10
+    },
+    {
+      "n": 3,
+      "text": "A member who never activates. Legitimate. They hold an identity, appear in searches, and have no number. Do not treat the missing number as an error.",
+      "page": 10
+    },
+    {
+      "n": 4,
+      "text": "A household sharing one email address. The uniqueness is on the login account, not on the member email row, so two members may list the same address. Only one of them can use it to sign in.",
+      "page": 10
+    },
+    {
+      "n": 5,
+      "text": "A member with no driving license. Possible where the membership is held by someone who never drives, with an additional driver doing the driving. Do not require it.",
+      "page": 10
+    },
+    {
+      "n": 6,
+      "text": "Activation before the planned start date. The start moves back to the activation date, the end date and payment schedule recompute, and the membership year begins now. Activating a future-dated gift early is therefore a mistake rather than a convenience.",
+      "page": 10
+    },
+    {
+      "n": 7,
+      "text": "Activation after the start date. The start moves forward, and the end date and payment schedule are recomputed, so the member receives their full year rather than losing the days nobody used. Staff confirm rather than the system deciding.",
+      "page": 10
+    },
+    {
+      "n": 8,
+      "text": "A tentative reservation against a Pending member. Converts at activation. Where the member never activates, the reservation falls with the enrollment.",
+      "page": 10
+    },
+    {
+      "n": 9,
+      "text": "A duplicate flag ignored deliberately. Two genuine people. Record that the flag was reviewed, so the next person to notice does not investigate it again.",
+      "page": 10
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "One transaction, several screens. The wizard spans steps but commits as a unit. A partial write leaves a member the club cannot bill and cannot find.",
+      "page": 11
+    },
+    {
+      "n": 2,
+      "text": "Normalize before comparing. Duplicate detection on raw strings finds almost nothing. Strip case and punctuation from names, reduce phones to digits, and compare addresses on number and postal code.",
+      "page": 11
+    },
+    {
+      "n": 3,
+      "text": "Flag, never block. A blocking duplicate check will be worked around by entering a middle initial, which produces exactly the duplicate it was meant to prevent.",
+      "page": 11
+    },
+    {
+      "n": 4,
+      "text": "Minting is atomic. member_seq, member_number, member_since, and the status change happen together. A number issued without a status change is a number the club cannot explain.",
+      "page": 11
+    },
+    {
+      "n": 5,
+      "text": "Never mint on save. The gap between a saved and an activated member is the reason the number sequence has gaps, and those gaps are correct.",
+      "page": 11
+    },
+    {
+      "n": 6,
+      "text": "Insurance is not a gate here. Any code that refuses activation for missing insurance has inverted the rule and will stop the club billing members who have agreed to join.",
+      "page": 11
+    },
+    {
+      "n": 7,
+      "text": "Availability, not access. Enrollment reads which levels may be sold at this branch. Reading the access table instead offers levels the branch cannot sell.",
+      "page": 11
+    },
+    {
+      "n": 8,
+      "text": "citext on the email column. No lower-casing on write, and comparison is already case- insensitive.",
+      "page": 11
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Creation",
+      "text": "Saving a member writes one USER row and one MEMBER row, and rolling back either leaves neither.",
+      "page": 11,
+      "item_id": "6.1-C01",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Creation",
+      "text": "A second member profile cannot be created against a login account that already has one.",
+      "page": 11,
+      "item_id": "6.1-C02",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Creation",
+      "text": "A saved member has a member_id, a Pending status, and no member number.",
+      "page": 11,
+      "item_id": "6.1-C03",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Creation",
+      "text": "A license state not present in STATE_SELECT is rejected.",
+      "page": 11,
+      "item_id": "6.1-C04",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "A matching driving license number raises a flag on its own.",
+      "page": 11,
+      "item_id": "6.1-C05",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "A matching email address raises a flag on its own.",
+      "page": 11,
+      "item_id": "6.1-C06",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "A matching last name alone does not raise a flag.",
+      "page": 11,
+      "item_id": "6.1-C07",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "A matching last name and date of birth together raise a flag.",
+      "page": 11,
+      "item_id": "6.1-C08",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "Names differing only by case or punctuation are treated as matching.",
+      "page": 12,
+      "item_id": "6.1-C09",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "Phone numbers differing only by formatting are treated as matching.",
+      "page": 12,
+      "item_id": "6.1-C10",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "A flagged entry can proceed once reviewed, and the review is recorded.",
+      "page": 12,
+      "item_id": "6.1-C11",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Duplicate Detection",
+      "text": "A match against a former member routes to the rejoin path.",
+      "page": 12,
+      "item_id": "6.1-C12",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Contact Details",
+      "text": "A member cannot be saved without at least one account-flagged email address.",
+      "page": 12,
+      "item_id": "6.1-C13",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Contact Details",
+      "text": "A member cannot be saved without at least one vehicle-flagged email address.",
+      "page": 12,
+      "item_id": "6.1-C14",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Contact Details",
+      "text": "A second phone or email marked primary for the same member is rejected.",
+      "page": 12,
+      "item_id": "6.1-C15",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Contact Details",
+      "text": "Two members may list the same email address.",
+      "page": 12,
+      "item_id": "6.1-C16",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Only levels available at the enrolling branch appear in the picker.",
+      "page": 12,
+      "item_id": "6.1-C17",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "The payment schedule is built from the level price at the enrolling branch.",
+      "page": 12,
+      "item_id": "6.1-C18",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Dues are twelve equal payments falling on the first, with no proration.",
+      "page": 12,
+      "item_id": "6.1-C19",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Activation without a payment arrangement is refused.",
+      "page": 12,
+      "item_id": "6.1-C20",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Activation without insurance succeeds.",
+      "page": 12,
+      "item_id": "6.1-C21",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Activation earlier than the planned start moves the start date to the activation date.",
+      "page": 12,
+      "item_id": "6.1-C22",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Activation later than the planned start moves the start date forward and recomputes the end date.",
+      "page": 12,
+      "item_id": "6.1-C23",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "The originally planned start date remains readable in the change history.",
+      "page": 12,
+      "item_id": "6.1-C24",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Editing the planned start date moves the activation task with it.",
+      "page": 12,
+      "item_id": "6.1-C25",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Activation posts the joining bonus onto the package.",
+      "page": 12,
+      "item_id": "6.1-C26",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Activation converts tentative reservations held against the member.",
+      "page": 12,
+      "item_id": "6.1-C27",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "First activation mints member_seq, member_number, and member_since together.",
+      "page": 12,
+      "item_id": "6.1-C28",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "A second activation does not mint a new number.",
+      "page": 12,
+      "item_id": "6.1-C29",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "A never-activated member has no number and appears in searches.",
+      "page": 12,
+      "item_id": "6.1-C30",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Late activation moves the start date and recomputes the end date and schedule.",
+      "page": 12,
+      "item_id": "6.1-C31",
+      "guide_id": "6.1"
+    },
+    {
+      "group": "Membership and Activation",
+      "text": "Early activation leaves a future start date unchanged.",
+      "page": 12,
+      "item_id": "6.1-C32",
+      "guide_id": "6.1"
+    }
+  ],
+  "checklist_count": 32
+}

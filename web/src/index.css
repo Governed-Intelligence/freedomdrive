@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { font-family: 'Inter', system-ui, sans-serif; color: #1f1a19; background: #faf8f5; }
+  body { @apply bg-cream-100 text-slate-900 antialiased; }
+  h1, h2, h3, h4 { @apply font-display; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(139, 30, 30, 0.2); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(139, 30, 30, 0.4); }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2; }
+  .btn-primary { @apply btn bg-burgundy-600 text-white hover:bg-burgundy-700 focus:ring-burgundy-500 shadow-sm; }
+  .btn-secondary { @apply btn bg-white text-burgundy-700 border border-burgundy-200 hover:bg-burgundy-50 focus:ring-burgundy-300; }
+  .btn-ghost { @apply btn bg-transparent text-slate-700 hover:bg-slate-100 focus:ring-slate-300; }
+  .card { @apply bg-white rounded-xl shadow-card border border-slate-100; }
+  .card-luxe { @apply bg-white rounded-2xl shadow-lux border border-gold-100/60; }
+  .input { @apply w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-burgundy-300 focus:border-burgundy-400; }
+  .label { @apply block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1; }
+}

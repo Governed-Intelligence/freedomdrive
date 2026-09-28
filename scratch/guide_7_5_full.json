@@ -1,0 +1,507 @@
+{
+  "guide_id": "7.5",
+  "chapter_no": 7,
+  "part_no": 2,
+  "title": "Pricing, Dues, and Branch Pricing",
+  "page_start": 125,
+  "page_end": 130,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 2 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 7, section HOW PRICING AND DUES WORK",
+  "tables_referenced": [
+    "MEMBERSHIP_LEVEL_BRANCH_AVAILABILITY",
+    "MEMBERSHIP_LEVEL_PRICING",
+    "MEMBER_PAYMENT_SCHEDULE",
+    "MPC_PRICING",
+    "PRICING_TYPE_SELECT"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "A level has five money figures: an application fee, a joining fee, monthly dues, annual dues, and the\nmarkup applied when the club fuels a car. Together they are what a member is quoted when they join\nand what they pay when they renew.\nThis guide covers how those figures are held, how the same level can cost different amounts in\ndifferent cities, and how a price increase is entered so that it reaches members at the right moment\nand no sooner.\nThe rule that governs the whole subject: a price change takes effect at renewal only. It never reaches\na member mid-period, never prorates, and never alters a payment schedule that is already running.\nThat is a commercial promise as much as a technical rule, and everything here exists to keep it.\nPairs with How It Works chapter 7, section HOW PRICING AND DUES WORK.",
+    "schema_overview": "TABLES USED BY THIS GUIDE\n\nTable                                             Role in this guide\n\n                                                  The five figures, scoped by level, branch, and effective date.\n                                                  Dated rather than shadowed: a superseded row is dated closed\nMEMBERSHIP_LEVEL_PRICING\n                                                  and retained, so a past price is read from the row in force on\n                                                  that date.\n\n                                                  Where the level may be sold. A price without availability can\nMEMBERSHIP_LEVEL_BRANCH_AVAILABILITY\n                                                  never be quoted.\n\nMEMBER_PAYMENT_SCHEDULE                           Where the price becomes a member’s actual dues.\n\n                                                  Per-member negotiated departures. See the Member\nMPC_PRICING\n                                                  Management chapter.\n\nPRICING_TYPE_SELECT                               The pricing types a customization may adjust.\n\n\n\n\nTHE THREE-PART KEY\n\nColumn                          What it scopes\n\nmembership_level_id             Which level this price is for.\n\nbranch_id                       Which branch. Empty means the standard price at every branch.\n\neffective_from                  From when. A renewal reads the row effective on its own date.\n\n\n\nThe three together are unique. One level may therefore hold a standard price and a New York price,\neach with its own history of dated rows, and none of them ever overwrites another.",
+    "implementation_workflow": "1) Setting a Standard Price\n    1. Create the row with the level, no branch, an effective date, and all five figures.\n    2. A row with no branch is the standard price for that level everywhere. It is the row that must\n       exist before any branch-specific row is permitted.\n    3. All five figures are required and none may be negative. A fee of zero is legitimate and is not\n       the same as an absent figure.\n    4. The effective date may be today or in the future, never in the past. Backdating a price would\n       change what somebody was already quoted.\n\n2) Setting a Branch Price\n    1. Create a second row for the same level with a branch and its own effective date.\n    2. A branch row overrides the standard for that market only. Every other branch continues on the\n       standard row.\n    3. The branch row carries all five figures, not only the ones that differ. A branch that does not\n       vary the fuel markup repeats it.\n    4. A branch price with no availability row for that branch is a data error. The price could never be\n       quoted, because the level cannot be sold there.\n    5. A level with no branch row for a city simply uses the standard figure. Absence means\n       standard, not unavailable.\n    6. A member who relocates picks up their new branch’s price at their next renewal, never mid-\n       period, so they end up paying what everyone else at that location pays.\n    7. Refuse a branch row where no standard row exists for the level, or the club ends up with a\n       level priced in one city and nowhere else.\n\nEXAMPLE — RESOLVING A PRICE\n\nQuestion                      Rows considered       Answer\n\n                              Standard row\nDaytona at Houston, today     effective on or       The standard price\n                              before today\n\n                              New York row if one\n                              is effective;\nDaytona at New York, today                          The New York price\n                              otherwise the\n                              standard\n\nDaytona at Houston, next      Rows effective on or\n                                                   Whichever is current then\nJanuary                       before that date\n\n\n\n3) Entering an Increase\n    1. An increase is a new row with a later effective date, not an edit to an existing one. The\n       previous row stays and remains the answer for any date before the change.\n    2. The entry screen offers a percentage or a direct amount. The percentage is an entry aid: it\n       calculates the figures and shows them for review, and only the resulting amounts are stored.\n    3. Select the level, and either every branch or one branch. An increase in one market leaves\n       every other market alone.\n\n\n    4. Set the effective date. A future date is the ordinary case: entered in November, effective the\n       first of January.\n    5. Nothing happens to any existing member at the moment the row is saved. New sales quote\n       the new figure from the effective date; existing members meet it at their own renewal.\n\n4) Reading a Price\n    1. At joining, read the price for the level at the enrolling branch, effective on the enrollment date.\n    2. At renewal, read the price for the level at the member’s current home branch, effective on the\n       renewal date.\n    3. Prefer a branch row over the standard row. Where no branch row is effective on that date, the\n       standard row is the answer.\n    4. Read at no other time. A running package prices its dues from its own payment schedule,\n       which was built at activation or at the last renewal.\n    5. A member who transferred branches during the period meets their new branch’s price at their\n       next renewal, which is when the transfer finally reaches their bill.\n\n5) Negotiated Prices and Increases\n    1. Where a member holds a pricing customization still in force after the effective date, they are\n       not moved to the new catalog figure.\n    2. What happens at renewal is decided by the scope on the customization. A first Year (Period)\n       or Current Year (Period) rate simply ends, and the member renews at the standard figure with\n       nothing to review.\n    3. An every package rate continues through the increase. The renewal leaves the negotiated\n       figure in place and raises a task naming the member, what they pay, and what the new catalog\n       price is, so a permanent discount surviving a price rise is a decision somebody makes rather\n       than one nobody notices.\n    4. A person decides, because only a person knows whether the discount was agreed as a fixed\n       amount or as a fixed gap below the standard price.\n    5. Customizations scoped to a first or current package expire on their own and need no attention.",
+    "rules_and_constraints": "    1. A price change takes effect at renewal only and never mid-period.\n    2. The key is level, branch, and effective date together, and it is unique.\n    3. A row with no branch is the standard price at every branch.\n    4. A branch row requires a standard row for the same level to exist.\n    5. Every row carries all five figures; a branch row repeats what it does not vary.\n    6. Figures may be zero and may not be negative.\n    7. An effective date may be today or future, never past.\n    8. An increase is a new row, never an edit.\n    9. A percentage is an entry aid; only amounts are stored.\n    10. Pricing is read at joining and at renewal and at no other time.\n    11. A branch row is preferred over the standard row for the same date.\n\n    12. A branch price with no availability at that branch is a data error.\n    13. A member with an in-force negotiated price is never moved automatically; where its scope is\n        Every Year (Period), a task is raised.\n    14. A member who relocates picks up their new branch’s price at their next renewal, never mid-\n        period.",
+    "integration_and_edge_cases": "    1. An increase entered in November for January. The ordinary case. December renewals take\n       the old figure and January renewals take the new one, with nobody having to act on the day.\n    2. A member renewing on the effective date itself. The new row is effective on that date, so\n       they take the new price. Effective from means from and including.\n    3. A level with a New York price and no standard price. Refused. Every other branch would\n       have nothing to quote.\n    4. A branch price for a branch where the level is not sold. Nothing breaks and the price can\n       never be used. Flag it rather than leaving it to be found.\n    5. A member who moved from Houston to New York mid-period. They pay Houston prices\n       until their renewal, then New York prices. The transfer reaches correspondence immediately\n       and the bill later, deliberately.\n    6. A price reduced rather than raised. Same mechanism entirely. The word increase is habit;\n       the structure does not care about direction.\n    7. A negotiated price below the old catalog figure when the catalog rises. The task exists\n       precisely because the club has to decide whether the member keeps the amount or keeps the\n       discount.\n    8. Two rows for one level, branch, and date. Impossible; the key prevents it. Correcting a row\n       entered in error means superseding it with another effective date, or deleting it before it has\n       been used.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                         Outcome\n\nPrice row saved                 Affected members listed with current and new figures, before commit.\n\nEffective date reached          New sales quote the new figure; existing members unaffected until renewal.\n\nRenewal processed               Price read for the level at the member’s home branch on the renewal date.\n\nRenewal with an in-force\n                                Member left as they are; review task raised.\nnegotiated price\n\nBranch price saved with no\n                                Warning raised.\navailability at that branch\n\n\n\nReserved for the automations pass: whether members are notified of a price change ahead of their\nrenewal and how far ahead, and who receives the negotiated-pricing review task.",
+    "developer_notes": "    1. Renewal only. This is the whole guide. Any code path that reprices a running package has\n       broken the dues doctrine, and the failure will show up as a member being billed something\n       they never agreed to.\n    2. Resolution has two steps. Filter to rows effective on or before the date, then prefer a branch\n       row over the standard one. Doing it in one query with a coalesce is possible and much harder\n       to read.\n    3. From means from and including. A renewal on the effective date takes the new price. State\n       it in the query rather than leaving it to whoever writes the comparison.\n    4. Never edit a price row. Supersede it. Editing rewrites what somebody was quoted, and the\n       shadow will show a change nobody can explain.\n    5. The percentage is not stored. Only the resulting amounts. Storing a percentage invites\n       somebody to recompute later against a different base.\n    6. Zero is a price. A joining fee of zero is a real commercial decision. Do not treat it as missing.\n    7. Availability and pricing are checked together at enrollment. A level needs both to be\n       sellable, and the two failures deserve different messages.",
+    "testing_checklist": "Setting Prices\n    ☐ A branch row without a standard row for the same level is refused.\n    ☐ A second row for the same level, branch, and effective date is refused.\n    ☐ A price row with a past effective date is refused.\n    ☐ A negative figure is refused; a zero figure is accepted.\n    ☐ A branch price for a branch with no availability raises a warning.\n\nResolution\n    ☐ A branch with no branch row resolves to the standard price.\n    ☐ A branch with a branch row resolves to the branch price.\n    ☐ A renewal on the effective date itself takes the new price.\n    ☐ A renewal before the effective date takes the previous price.\n    ☐ A future-dated question returns the price that will apply then.\n\nIncreases\n    ☐ An increase creates a new row and leaves the previous one intact.\n    ☐ Saving an increase lists the affected members before committing.\n    ☐ No existing member’s payment schedule changes when the row is saved.\n    ☐ A member renewing after the effective date takes the new figure.\n    ☐ An increase applied to one branch leaves other branches unchanged.\n    ☐ The percentage entry aid stores amounts only.\n\nNegotiated Prices\n    ☐ A member with an in-force pricing customization keeps their figure at renewal.\n    ☐ A review task is raised naming the member and both figures.\n    ☐ A first-package pricing customization expires without a task."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Setting a Standard Price",
+      "page": 125,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Create the row with the level, no branch, an effective date, and all five figures.",
+          "page": 126
+        },
+        {
+          "n": 2,
+          "text": "A row with no branch is the standard price for that level everywhere. It is the row that must exist before any branch-specific row is permitted.",
+          "page": 126
+        },
+        {
+          "n": 3,
+          "text": "All five figures are required and none may be negative. A fee of zero is legitimate and is not the same as an absent figure.",
+          "page": 126
+        },
+        {
+          "n": 4,
+          "text": "The effective date may be today or in the future, never in the past. Backdating a price would change what somebody was already quoted.",
+          "page": 126
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Setting a Branch Price",
+      "page": 126,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Create a second row for the same level with a branch and its own effective date.",
+          "page": 126
+        },
+        {
+          "n": 2,
+          "text": "A branch row overrides the standard for that market only. Every other branch continues on the standard row.",
+          "page": 126
+        },
+        {
+          "n": 3,
+          "text": "The branch row carries all five figures, not only the ones that differ. A branch that does not vary the fuel markup repeats it.",
+          "page": 126
+        },
+        {
+          "n": 4,
+          "text": "A branch price with no availability row for that branch is a data error. The price could never be quoted, because the level cannot be sold there.",
+          "page": 126
+        },
+        {
+          "n": 5,
+          "text": "A level with no branch row for a city simply uses the standard figure. Absence means standard, not unavailable.",
+          "page": 126
+        },
+        {
+          "n": 6,
+          "text": "A member who relocates picks up their new branch’s price at their next renewal, never mid- period, so they end up paying what everyone else at that location pays.",
+          "page": 126
+        },
+        {
+          "n": 7,
+          "text": "Refuse a branch row where no standard row exists for the level, or the club ends up with a level priced in one city and nowhere else. Standard row before today New York row if one is effective; otherwise the standard Whichever is current then",
+          "page": 126
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Entering an Increase",
+      "page": 126,
+      "steps": [
+        {
+          "n": 1,
+          "text": "An increase is a new row with a later effective date, not an edit to an existing one. The previous row stays and remains the answer for any date before the change.",
+          "page": 126
+        },
+        {
+          "n": 2,
+          "text": "The entry screen offers a percentage or a direct amount. The percentage is an entry aid: it calculates the figures and shows them for review, and only the resulting amounts are stored.",
+          "page": 126
+        },
+        {
+          "n": 3,
+          "text": "Select the level, and either every branch or one branch. An increase in one market leaves every other market alone.",
+          "page": 126
+        },
+        {
+          "n": 4,
+          "text": "Set the effective date. A future date is the ordinary case: entered in November, effective the first of January.",
+          "page": 127
+        },
+        {
+          "n": 5,
+          "text": "Nothing happens to any existing member at the moment the row is saved. New sales quote the new figure from the effective date; existing members meet it at their own renewal.",
+          "page": 127
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Reading a Price",
+      "page": 127,
+      "steps": [
+        {
+          "n": 1,
+          "text": "At joining, read the price for the level at the enrolling branch, effective on the enrollment date.",
+          "page": 127
+        },
+        {
+          "n": 2,
+          "text": "At renewal, read the price for the level at the member’s current home branch, effective on the renewal date.",
+          "page": 127
+        },
+        {
+          "n": 3,
+          "text": "Prefer a branch row over the standard row. Where no branch row is effective on that date, the standard row is the answer.",
+          "page": 127
+        },
+        {
+          "n": 4,
+          "text": "Read at no other time. A running package prices its dues from its own payment schedule, which was built at activation or at the last renewal.",
+          "page": 127
+        },
+        {
+          "n": 5,
+          "text": "A member who transferred branches during the period meets their new branch’s price at their next renewal, which is when the transfer finally reaches their bill.",
+          "page": 127
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Negotiated Prices and Increases",
+      "page": 127,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Where a member holds a pricing customization still in force after the effective date, they are not moved to the new catalog figure.",
+          "page": 127
+        },
+        {
+          "n": 2,
+          "text": "What happens at renewal is decided by the scope on the customization. A first Year (Period) or Current Year (Period) rate simply ends, and the member renews at the standard figure with nothing to review.",
+          "page": 127
+        },
+        {
+          "n": 3,
+          "text": "An every package rate continues through the increase. The renewal leaves the negotiated figure in place and raises a task naming the member, what they pay, and what the new catalog price is, so a permanent discount surviving a price rise is a decision somebody makes rather than one nobody notices.",
+          "page": 127
+        },
+        {
+          "n": 4,
+          "text": "A person decides, because only a person knows whether the discount was agreed as a fixed amount or as a fixed gap below the standard price.",
+          "page": 127
+        },
+        {
+          "n": 5,
+          "text": "Customizations scoped to a first or current package expire on their own and need no attention.",
+          "page": 127
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "A price change takes effect at renewal only and never mid-period.",
+      "page": 127,
+      "rule_id": "7.5-R01"
+    },
+    {
+      "n": 2,
+      "text": "The key is level, branch, and effective date together, and it is unique.",
+      "page": 127,
+      "rule_id": "7.5-R02"
+    },
+    {
+      "n": 3,
+      "text": "A row with no branch is the standard price at every branch.",
+      "page": 127,
+      "rule_id": "7.5-R03"
+    },
+    {
+      "n": 4,
+      "text": "A branch row requires a standard row for the same level to exist.",
+      "page": 127,
+      "rule_id": "7.5-R04"
+    },
+    {
+      "n": 5,
+      "text": "Every row carries all five figures; a branch row repeats what it does not vary.",
+      "page": 127,
+      "rule_id": "7.5-R05"
+    },
+    {
+      "n": 6,
+      "text": "Figures may be zero and may not be negative.",
+      "page": 127,
+      "rule_id": "7.5-R06"
+    },
+    {
+      "n": 7,
+      "text": "An effective date may be today or future, never past.",
+      "page": 127,
+      "rule_id": "7.5-R07"
+    },
+    {
+      "n": 8,
+      "text": "An increase is a new row, never an edit.",
+      "page": 127,
+      "rule_id": "7.5-R08"
+    },
+    {
+      "n": 9,
+      "text": "A percentage is an entry aid; only amounts are stored.",
+      "page": 127,
+      "rule_id": "7.5-R09"
+    },
+    {
+      "n": 10,
+      "text": "Pricing is read at joining and at renewal and at no other time.",
+      "page": 127,
+      "rule_id": "7.5-R10"
+    },
+    {
+      "n": 11,
+      "text": "A branch row is preferred over the standard row for the same date.",
+      "page": 127,
+      "rule_id": "7.5-R11"
+    },
+    {
+      "n": 12,
+      "text": "A branch price with no availability at that branch is a data error.",
+      "page": 128,
+      "rule_id": "7.5-R12"
+    },
+    {
+      "n": 13,
+      "text": "A member with an in-force negotiated price is never moved automatically; where its scope is Every Year (Period), a task is raised.",
+      "page": 128,
+      "rule_id": "7.5-R13"
+    },
+    {
+      "n": 14,
+      "text": "A member who relocates picks up their new branch’s price at their next renewal, never mid- period.",
+      "page": 128,
+      "rule_id": "7.5-R14"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "An increase entered in November for January. The ordinary case. December renewals take the old figure and January renewals take the new one, with nobody having to act on the day.",
+      "page": 128
+    },
+    {
+      "n": 2,
+      "text": "A member renewing on the effective date itself. The new row is effective on that date, so they take the new price. Effective from means from and including.",
+      "page": 128
+    },
+    {
+      "n": 3,
+      "text": "A level with a New York price and no standard price. Refused. Every other branch would have nothing to quote.",
+      "page": 128
+    },
+    {
+      "n": 4,
+      "text": "A branch price for a branch where the level is not sold. Nothing breaks and the price can never be used. Flag it rather than leaving it to be found.",
+      "page": 128
+    },
+    {
+      "n": 5,
+      "text": "A member who moved from Houston to New York mid-period. They pay Houston prices until their renewal, then New York prices. The transfer reaches correspondence immediately and the bill later, deliberately.",
+      "page": 128
+    },
+    {
+      "n": 6,
+      "text": "A price reduced rather than raised. Same mechanism entirely. The word increase is habit; the structure does not care about direction.",
+      "page": 128
+    },
+    {
+      "n": 7,
+      "text": "A negotiated price below the old catalog figure when the catalog rises. The task exists precisely because the club has to decide whether the member keeps the amount or keeps the discount.",
+      "page": 128
+    },
+    {
+      "n": 8,
+      "text": "Two rows for one level, branch, and date. Impossible; the key prevents it. Correcting a row entered in error means superseding it with another effective date, or deleting it before it has been used.",
+      "page": 128
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Renewal only. This is the whole guide. Any code path that reprices a running package has broken the dues doctrine, and the failure will show up as a member being billed something they never agreed to.",
+      "page": 129
+    },
+    {
+      "n": 2,
+      "text": "Resolution has two steps. Filter to rows effective on or before the date, then prefer a branch row over the standard one. Doing it in one query with a coalesce is possible and much harder to read.",
+      "page": 129
+    },
+    {
+      "n": 3,
+      "text": "From means from and including. A renewal on the effective date takes the new price. State it in the query rather than leaving it to whoever writes the comparison.",
+      "page": 129
+    },
+    {
+      "n": 4,
+      "text": "Never edit a price row. Supersede it. Editing rewrites what somebody was quoted, and the shadow will show a change nobody can explain.",
+      "page": 129
+    },
+    {
+      "n": 5,
+      "text": "The percentage is not stored. Only the resulting amounts. Storing a percentage invites somebody to recompute later against a different base.",
+      "page": 129
+    },
+    {
+      "n": 6,
+      "text": "Zero is a price. A joining fee of zero is a real commercial decision. Do not treat it as missing.",
+      "page": 129
+    },
+    {
+      "n": 7,
+      "text": "Availability and pricing are checked together at enrollment. A level needs both to be sellable, and the two failures deserve different messages.",
+      "page": 129
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Setting Prices",
+      "text": "A branch row without a standard row for the same level is refused.",
+      "page": 129,
+      "item_id": "7.5-C01",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Setting Prices",
+      "text": "A second row for the same level, branch, and effective date is refused.",
+      "page": 129,
+      "item_id": "7.5-C02",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Setting Prices",
+      "text": "A price row with a past effective date is refused.",
+      "page": 129,
+      "item_id": "7.5-C03",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Setting Prices",
+      "text": "A negative figure is refused; a zero figure is accepted.",
+      "page": 129,
+      "item_id": "7.5-C04",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Setting Prices",
+      "text": "A branch price for a branch with no availability raises a warning.",
+      "page": 129,
+      "item_id": "7.5-C05",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Resolution",
+      "text": "A branch with no branch row resolves to the standard price.",
+      "page": 129,
+      "item_id": "7.5-C06",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Resolution",
+      "text": "A branch with a branch row resolves to the branch price.",
+      "page": 129,
+      "item_id": "7.5-C07",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Resolution",
+      "text": "A renewal on the effective date itself takes the new price.",
+      "page": 129,
+      "item_id": "7.5-C08",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Resolution",
+      "text": "A renewal before the effective date takes the previous price.",
+      "page": 129,
+      "item_id": "7.5-C09",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Resolution",
+      "text": "A future-dated question returns the price that will apply then.",
+      "page": 129,
+      "item_id": "7.5-C10",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Increases",
+      "text": "An increase creates a new row and leaves the previous one intact.",
+      "page": 129,
+      "item_id": "7.5-C11",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Increases",
+      "text": "Saving an increase lists the affected members before committing.",
+      "page": 129,
+      "item_id": "7.5-C12",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Increases",
+      "text": "No existing member’s payment schedule changes when the row is saved.",
+      "page": 129,
+      "item_id": "7.5-C13",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Increases",
+      "text": "A member renewing after the effective date takes the new figure.",
+      "page": 129,
+      "item_id": "7.5-C14",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Increases",
+      "text": "An increase applied to one branch leaves other branches unchanged.",
+      "page": 129,
+      "item_id": "7.5-C15",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Increases",
+      "text": "The percentage entry aid stores amounts only.",
+      "page": 129,
+      "item_id": "7.5-C16",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Negotiated Prices",
+      "text": "A member with an in-force pricing customization keeps their figure at renewal.",
+      "page": 130,
+      "item_id": "7.5-C17",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Negotiated Prices",
+      "text": "A review task is raised naming the member and both figures.",
+      "page": 130,
+      "item_id": "7.5-C18",
+      "guide_id": "7.5"
+    },
+    {
+      "group": "Negotiated Prices",
+      "text": "A first-package pricing customization expires without a task.",
+      "page": 130,
+      "item_id": "7.5-C19",
+      "guide_id": "7.5"
+    }
+  ],
+  "checklist_count": 19
+}

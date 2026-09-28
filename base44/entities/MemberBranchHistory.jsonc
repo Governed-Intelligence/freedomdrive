@@ -1,0 +1,62 @@
+{
+  "name": "MemberBranchHistory",
+  "type": "object",
+  "properties": {
+    "member_id": {
+      "type": "string",
+      "description": "Foreign key to Member.id (6.3-R01)"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "Foreign key to Branch.id"
+    },
+    "branch_code": {
+      "type": "string",
+      "description": "Branch code (e.g. HOU, DFW, ATX)"
+    },
+    "branch_name": {
+      "type": "string",
+      "description": "Branch display name (e.g. Houston, Dallas, Austin)"
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date",
+      "description": "Date assignment took effect (6.3-R08)"
+    },
+    "effective_to": {
+      "type": "string",
+      "format": "date",
+      "description": "Date assignment closed. Null for the currently active assignment (6.3-C13)"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for assignment or transfer, e.g. Initial Enrollment, Member Relocation (6.3-R09)"
+    }
+  },
+  "required": [
+    "member_id",
+    "effective_from"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "never"
+      }
+    }
+  }
+}

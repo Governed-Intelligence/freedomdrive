@@ -1,0 +1,125 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  REPO: ${{ vars.APP_NAME }}-${{ vars.ENVIRONMENT }}-containers
+  IMAGE_NAME: api
+  API_SERVICE: ${{ vars.APP_NAME }}-${{ vars.ENVIRONMENT }}-api
+  WEB_SERVICE: ${{ vars.APP_NAME }}-${{ vars.ENVIRONMENT }}-web
+  MIGRATE_JOB: ${{ vars.APP_NAME }}-${{ vars.ENVIRONMENT }}-migrate
+
+# Required for google-github-actions/auth with Workload Identity Federation
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Compute image tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}"
+          LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE_NAME }}:latest"
+          echo "tag=${TAG}"       >> "$GITHUB_OUTPUT"
+          echo "latest=${LATEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        working-directory: api
+        run: |
+          docker build -t "${{ steps.tag.outputs.tag }}" -t "${{ steps.tag.outputs.latest }}" .
+          docker push "${{ steps.tag.outputs.tag }}"
+          docker push "${{ steps.tag.outputs.latest }}"
+
+      # --- Migrations ---
+      # Update the Cloud Run Job to the new image, then execute it.
+      # If migrations fail, we stop here — the API is not updated.
+      - name: Update migration job to new image
+        run: |
+          gcloud run jobs update "${{ env.MIGRATE_JOB }}" \
+            --region="${{ env.REGION }}" \
+            --image="${{ steps.tag.outputs.tag }}" \
+            --quiet
+
+      - name: Run migrations
+        run: |
+          gcloud run jobs execute "${{ env.MIGRATE_JOB }}" \
+            --region="${{ env.REGION }}" \
+            --wait \
+            --quiet
+
+      # --- Deploy API ---
+      - name: Deploy API to Cloud Run
+        run: |
+          gcloud run deploy "${{ env.API_SERVICE }}" \
+            --region="${{ env.REGION }}" \
+            --image="${{ steps.tag.outputs.tag }}" \
+            --quiet
+
+      - name: Get API service URL for frontend configuration
+        id: api_info
+        run: |
+          URL=$(gcloud run services describe "${{ env.API_SERVICE }}" --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+      # --- Build and deploy web frontend ---
+      - name: Compute web image tag
+        id: web_tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/web:${SHORT_SHA}"
+          LATEST="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/web:latest"
+          echo "tag=${TAG}"       >> "$GITHUB_OUTPUT"
+          echo "latest=${LATEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push web image
+        working-directory: web
+        run: |
+          docker build \
+            --build-arg VITE_API_URL="${{ steps.api_info.outputs.url }}" \
+            -t "${{ steps.web_tag.outputs.tag }}" \
+            -t "${{ steps.web_tag.outputs.latest }}" .
+          docker push "${{ steps.web_tag.outputs.tag }}"
+          docker push "${{ steps.web_tag.outputs.latest }}"
+
+      - name: Deploy web to Cloud Run
+        run: |
+          gcloud run deploy "${{ env.WEB_SERVICE }}" \
+            --region="${{ env.REGION }}" \
+            --image="${{ steps.web_tag.outputs.tag }}" \
+            --set-env-vars="API_URL=${{ steps.api_info.outputs.url }}" \
+            --quiet
+
+      - name: Show deployed URLs
+        run: |
+          API_URL="${{ steps.api_info.outputs.url }}"
+          WEB_URL=$(gcloud run services describe "${{ env.WEB_SERVICE }}" --region="${{ env.REGION }}" --format='value(status.url)')
+          echo "API: $API_URL"
+          echo "Web: $WEB_URL"
+          curl -s "$API_URL/healthz" || true
+

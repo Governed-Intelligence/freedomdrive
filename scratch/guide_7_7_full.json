@@ -1,0 +1,484 @@
+{
+  "guide_id": "7.7",
+  "chapter_no": 7,
+  "part_no": 2,
+  "title": "Vehicle Tier Mapping and Point Rates",
+  "page_start": 136,
+  "page_end": 140,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 2 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 7, section HOW RATE CARDS WORK, topic Vehicle Tiers",
+  "tables_referenced": [
+    "MEMBER_PACKAGE_RATE",
+    "MPC_TIER_ASSIGNMENT",
+    "MPC_TIER_POINT_RATE",
+    "RATE_CARD_PLACEMENT",
+    "RATE_CARD_RATE",
+    "RATE_CARD_SEASON",
+    "VEHICLE_TIER"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "A rate card prices tiers, not cars. What turns a tier price into a price for a particular vehicle is the\nmapping that says which tier that car sits in, on that card, on that date.\nThis guide covers that mapping and the point rates that follow from it, including the case that makes\nthe structure worth its complexity: the same car can sit in different tiers on different cards at the same\ntime.\nThat is not an oddity, it is a lever. A car that was top tier in 2019 may be mid tier today, and members\non the old card should still see it where it was when they bought their membership. It is also how a car\nthat did not exist in 2019 is priced sensibly for those members: it is placed on their card at whatever\ntier the club judges right, without anything else about their pricing changing.\nPairs with How It Works chapter 7, section HOW RATE CARDS WORK, topic Vehicle Tiers.",
+    "schema_overview": "TABLES USED BY THIS GUIDE\n\nTable                           Role in this guide\n\nRATE_CARD_PLACEMENT             Which vehicle sits in which tier, on which card, between which dates.\n\nRATE_CARD_RATE                  What that tier costs on that card.\n\nVEHICLE_TIER                    The tiers themselves. See the Vehicles chapter.\n\nMPC_TIER_ASSIGNMENT,\n                                Per-member departures from both.\nMPC_TIER_POINT_RATE\n\n\n\nThe mapping is keyed on card and vehicle with effective dates, which is what allows one car to be\nplaced differently on two cards, and to move between tiers on one card over time.",
+    "implementation_workflow": "1) Placing a Vehicle in a Tier\n    1. Create a RATE_CARD_PLACEMENT row naming the card, the vehicle, the tier, and an\n       effective_from date.\n    2. Every vehicle the club expects to be reservable needs a placement on every card in use. A car\n       with no placement on a member\u2019s card cannot be priced for that member.\n    3. Placements are dated. Moving a car to a different tier means closing the current row with\n       effective_to and opening a new one.\n    4. On a card not yet in use, placements may be edited freely. On a card in use, an existing\n       placement is permanent, but a placement for a vehicle the card does not yet cover may be\n       added.\n    5. A vehicle holds at most one placement per card. That constraint is what stops an addition\n       becoming a disguised move.\n\n2) Resolving a Price for a Vehicle\n\n    1. Take the member\u2019s package, and from it the rate card pointer effective on the trip date.\n    2. On that card, find the vehicle\u2019s placement effective on the trip date. That gives the tier.\n    3. On that card, find the rate row for that tier, and for the season containing the trip date where\n       the card has seasons.\n    4. That row supplies the weekday value, the weekend value, and the extra-mile value.\n    5. Apply any per-member departures last: a tier assignment override changes which tier the car\n       sits in for that member, and a point rate override changes what the tier costs them.\n    6. Five lookups in a fixed order. Any shortcut through them produces a price that is right for most\n       members and wrong for the ones who matter.\n\nEXAMPLE \u2014 THE RESOLUTION CHAIN\n\nStep                          Question                 Source\n\n                              Which card prices\n1                                                      MEMBER_PACKAGE_RATE on the trip date\n                              this member?\n\n                              Which tier is this car\n2                                                      RATE_CARD_PLACEMENT on the trip date\n                              in on that card?\n\n                              Which season is the\n3                                                      RATE_CARD_SEASON, or none\n                              trip in?\n\n                              What does that tier\n4                                                      RATE_CARD_RATE\n                              cost?\n\n                              Does this member\n5                                                      MPC_TIER_ASSIGNMENT, MPC_TIER_POINT_RATE\n                              have an override?\n\n\n\n3) Moving a Vehicle Between Tiers\n    1. On a card not yet in use, edit the placement freely.\n    2. On a card in use, an existing placement is permanent. Repricing a car that is already on the\n       card means a new card.\n    3. Where a car genuinely changes character, such as after a major refurbishment, the honest\n       answer is a new card rather than a retrospective adjustment.\n    4. Surface the number of members affected by any placement change before it is saved.\n\n4) Adding a Vehicle to the Fleet\n    1. A new car needs a placement on every card currently in use, or members on the cards it is\n       missing from cannot reserve it.\n    2. Adding a placement to a card in use is permitted. This is the append rule, and it is what lets a\n       new car reach every member without anybody being repriced or moved.\n    3. The tier is chosen per card and need not be the same on each. A car may sit in tier 3 on the\n       current card and tier 4 on a card from several years ago, which prices it sensibly for members\n       whose whole card is older without disturbing a single price they already had.\n    4. The user never sees cards. The vehicle intake form asks for a tier once per active membership\n       series, because that is the club\u2019s own language. Resolving a series answer to the cards it\n       covers is the system\u2019s job.\n    5. A series answer fans out across the whole lineage of that series: every card the series has\n       ever been linked to that any active package still points at. That is what covers a member\n       grandfathered on an older card of the same series, and it is why the form does not need to\n       mention cards at all.\n    6. A card no longer linked to any series but still held by members is reached through the lineage,\n       not through the current series link. Resolving only the current card would leave those\n       members unable to reserve the vehicle.\n    7. Default the choice to the tier used on the current card, so the ordinary case is one\n       confirmation, and allow it to be changed per card where the club wants a different answer.\n    8. Where the chosen tier is not yet priced on a card, add a rate row for it at the same time. A\n       placement without a rate is unpriceable.\n    9. Show every card in use when a vehicle is added, with its chosen tier, so nothing is missed\n       silently.",
+    "rules_and_constraints": "    1. A price is resolved for a vehicle through its tier placement on the member\u2019s card, never\n       directly.\n    2. Placements are dated and are keyed on card and vehicle.\n    3. The same vehicle may sit in different tiers on different cards at the same time.\n    4. An existing placement on a card in use is permanent; a placement for a vehicle the card does\n       not yet cover may be added.\n    5. A vehicle holds at most one placement per card.\n    6. A new vehicle is placed on every card in use, and the tier is chosen per card and need not be\n       the same on each.\n    7. A placement whose tier has no rate on that card is unpriceable and must be accompanied by a\n       rate row.\n    8. Resolution order is card, placement, season, rate, then per-member overrides.\n    9. A vehicle with no placement on a member\u2019s card cannot be priced for that member.\n    10. A vehicle missing a placement on a card cannot be priced for members on that card.",
+    "integration_and_edge_cases": "    1. One car, two tiers, two cards. The case the structure exists for. A member on the 2019 card\n       sees it where it was; a member on the current card sees it where it is now.\n    2. A car added after a card was published. Add a placement for it on that card, at whatever tier\n       suits members on that card. They can reserve it and every price they already had is\n       untouched. This is the case the append rule exists for.\n    3. A car placed in different tiers on two cards. Deliberate and useful. A member on a 2019\n       card may see a new McLaren a tier lower than a member on the current card, which is a\n       commercial decision rather than an inconsistency.\n    4. A car retired from the fleet. Placements stay, because historical trips reference them. The\n       car simply stops being available.\n    5. A member with a tier assignment override. Their car sits in a different tier from everybody\n       else\u2019s, and the price follows from that tier on their card.\n\n\n    6. A member with a point rate override. Same tier, different price. The two overrides are\n       independent and a member may hold both.\n    7. A seasonal card and a trip spanning a season boundary. The rule for which season prices\n       it belongs with settlement, not here, but the mapping must be able to answer for either date.\n    8. A placement with no rate row for its tier. The car is placed and unpriceable. Validate that\n       every placed tier has a rate on the same card.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                           Outcome\n\nVehicle added to the fleet        Cards in use lacking a placement for it are listed.\n\nPlacement changed on an\n                                  Affected member count shown before saving.\nunused card\n\nPlacement attempted on a card\n                                  Refused, with an offer to copy the card.\nin use\n\nPlaced tier with no rate row on\n                                  Flagged before the card is used.\nthe same card\n\n\n\nReserved for the automations pass: the policy for a new vehicle against older cards, and how an\nunpriceable placement is escalated.",
+    "developer_notes": "    1. Five lookups, in order. Card, placement, season, rate, overrides. Write it as one resolver\n       taking a member, a vehicle, and a date, and use it everywhere. Two implementations will\n       diverge and the difference will be money.\n    2. Everything takes a date. The card pointer, the placement, and the season are all dated. Pass\n       the trip date through the whole chain rather than reading now at any step.\n    3. Placement is per card. A vehicle_tier column on the vehicle itself would look simpler and\n       would destroy the ability to price a grandfathered member correctly.\n    4. Validate placement against rates. A placed tier with no rate on the same card is unpriceable\n       and will fail at settlement, which is the worst moment to find out.\n    5. Append, never amend, here too. An existing placement on a used card is permanent. An\n       insert for a vehicle the card does not cover is not a change and is safe, because no settled trip\n       could reference it.Placement is per card and the tier is a choice, but the choice is collected per\n       series. The vehicle intake form shows every active membership series and no cards at all.\n       Resolving a series answer to every card in that series lineage still held by an active package is\n       the system\u2019s job, and resolving only the current card silently excludes exactly the long-\n       standing members the append rule exists to protect.\n    6. A placement needs a rate. Adding a placement for a tier the card does not price leaves the\n       car unpriceable. Add both together or validate for the pair.",
+    "testing_checklist": "Placement\n    \u2610 A vehicle can sit in different tiers on two different cards at the same time.\n    \u2610 A placement change on an unused card is permitted.\n    \u2610 An edit to an existing placement on a card in use is refused.\n    \u2610 A placement for a vehicle not yet on a used card can be added.\n    \u2610 A second placement for the same vehicle on the same card is refused.\n    \u2610 A placement added with a tier the card does not price is caught.\n    \u2610 Moving a car between tiers closes the current row and opens a new one.\n    \u2610 A placed tier with no rate row on the same card is flagged.\n\nResolution\n    \u2610 A price resolves through card, placement, season, and rate in that order.\n    \u2610 The trip date is used at every dated step, not the current date.\n    \u2610 A tier assignment override changes the tier for that member only.\n    \u2610 A point rate override changes the price without changing the tier.\n    \u2610 A member may hold both overrides at once.\n    \u2610 A vehicle with no placement on the member\u2019s card cannot be priced.\n\nFleet Changes\n    \u2610 Adding a vehicle lists every active membership series with a tier to confirm for each, and no\n      rate cards.\n    \u2610 A series answer writes a placement on every card in that series lineage still held by an active\n      package.\n    \u2610 A member grandfathered on an older card of a series can reserve a vehicle added after that\n      card was superseded.\n    \u2610 The tier defaults to the current card\u2019s choice and can be changed per card.\n    \u2610 A vehicle placed in different tiers on two cards prices differently for members on each.\n    \u2610 A vehicle added to every card in use is reservable by every member whose level reaches its\n      tier.\n    \u2610 A retired vehicle keeps its placements so historical trips still price.\n    \u2610 A placement change shows the affected member count before saving."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Placing a Vehicle in a Tier",
+      "page": 136,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Create a RATE_CARD_PLACEMENT row naming the card, the vehicle, the tier, and an effective_from date.",
+          "page": 136
+        },
+        {
+          "n": 2,
+          "text": "Every vehicle the club expects to be reservable needs a placement on every card in use. A car with no placement on a member\u2019s card cannot be priced for that member.",
+          "page": 136
+        },
+        {
+          "n": 3,
+          "text": "Placements are dated. Moving a car to a different tier means closing the current row with effective_to and opening a new one.",
+          "page": 136
+        },
+        {
+          "n": 4,
+          "text": "On a card not yet in use, placements may be edited freely. On a card in use, an existing placement is permanent, but a placement for a vehicle the card does not yet cover may be added.",
+          "page": 136
+        },
+        {
+          "n": 5,
+          "text": "A vehicle holds at most one placement per card. That constraint is what stops an addition becoming a disguised move.",
+          "page": 136
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Resolving a Price for a Vehicle",
+      "page": 136,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Take the member\u2019s package, and from it the rate card pointer effective on the trip date.",
+          "page": 137
+        },
+        {
+          "n": 2,
+          "text": "On that card, find the vehicle\u2019s placement effective on the trip date. That gives the tier.",
+          "page": 137
+        },
+        {
+          "n": 3,
+          "text": "On that card, find the rate row for that tier, and for the season containing the trip date where the card has seasons.",
+          "page": 137
+        },
+        {
+          "n": 4,
+          "text": "That row supplies the weekday value, the weekend value, and the extra-mile value.",
+          "page": 137
+        },
+        {
+          "n": 5,
+          "text": "Apply any per-member departures last: a tier assignment override changes which tier the car sits in for that member, and a point rate override changes what the tier costs them.",
+          "page": 137
+        },
+        {
+          "n": 6,
+          "text": "Five lookups in a fixed order. Any shortcut through them produces a price that is right for most members and wrong for the ones who matter. Which card prices this member? Which tier is this car in on that card? Which season is the trip in? What does that tier cost? Does this member have an override?",
+          "page": 137
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Moving a Vehicle Between Tiers",
+      "page": 137,
+      "steps": [
+        {
+          "n": 1,
+          "text": "On a card not yet in use, edit the placement freely.",
+          "page": 137
+        },
+        {
+          "n": 2,
+          "text": "On a card in use, an existing placement is permanent. Repricing a car that is already on the card means a new card.",
+          "page": 137
+        },
+        {
+          "n": 3,
+          "text": "Where a car genuinely changes character, such as after a major refurbishment, the honest answer is a new card rather than a retrospective adjustment.",
+          "page": 137
+        },
+        {
+          "n": 4,
+          "text": "Surface the number of members affected by any placement change before it is saved.",
+          "page": 137
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Adding a Vehicle to the Fleet",
+      "page": 137,
+      "steps": [
+        {
+          "n": 1,
+          "text": "A new car needs a placement on every card currently in use, or members on the cards it is missing from cannot reserve it.",
+          "page": 137
+        },
+        {
+          "n": 2,
+          "text": "Adding a placement to a card in use is permitted. This is the append rule, and it is what lets a new car reach every member without anybody being repriced or moved.",
+          "page": 137
+        },
+        {
+          "n": 3,
+          "text": "The tier is chosen per card and need not be the same on each. A car may sit in tier 3 on the current card and tier 4 on a card from several years ago, which prices it sensibly for members whose whole card is older without disturbing a single price they already had.",
+          "page": 137
+        },
+        {
+          "n": 4,
+          "text": "The user never sees cards. The vehicle intake form asks for a tier once per active membership series, because that is the club\u2019s own language. Resolving a series answer to the cards it covers is the system\u2019s job.",
+          "page": 137
+        },
+        {
+          "n": 5,
+          "text": "A series answer fans out across the whole lineage of that series: every card the series has ever been linked to that any active package still points at. That is what covers a member grandfathered on an older card of the same series, and it is why the form does not need to mention cards at all.",
+          "page": 138
+        },
+        {
+          "n": 6,
+          "text": "A card no longer linked to any series but still held by members is reached through the lineage, not through the current series link. Resolving only the current card would leave those members unable to reserve the vehicle.",
+          "page": 138
+        },
+        {
+          "n": 7,
+          "text": "Default the choice to the tier used on the current card, so the ordinary case is one confirmation, and allow it to be changed per card where the club wants a different answer.",
+          "page": 138
+        },
+        {
+          "n": 8,
+          "text": "Where the chosen tier is not yet priced on a card, add a rate row for it at the same time. A placement without a rate is unpriceable.",
+          "page": 138
+        },
+        {
+          "n": 9,
+          "text": "Show every card in use when a vehicle is added, with its chosen tier, so nothing is missed silently.",
+          "page": 138
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "A price is resolved for a vehicle through its tier placement on the member\u2019s card, never directly.",
+      "page": 138,
+      "rule_id": "7.7-R01"
+    },
+    {
+      "n": 2,
+      "text": "Placements are dated and are keyed on card and vehicle.",
+      "page": 138,
+      "rule_id": "7.7-R02"
+    },
+    {
+      "n": 3,
+      "text": "The same vehicle may sit in different tiers on different cards at the same time.",
+      "page": 138,
+      "rule_id": "7.7-R03"
+    },
+    {
+      "n": 4,
+      "text": "An existing placement on a card in use is permanent; a placement for a vehicle the card does not yet cover may be added.",
+      "page": 138,
+      "rule_id": "7.7-R04"
+    },
+    {
+      "n": 5,
+      "text": "A vehicle holds at most one placement per card.",
+      "page": 138,
+      "rule_id": "7.7-R05"
+    },
+    {
+      "n": 6,
+      "text": "A new vehicle is placed on every card in use, and the tier is chosen per card and need not be the same on each.",
+      "page": 138,
+      "rule_id": "7.7-R06"
+    },
+    {
+      "n": 7,
+      "text": "A placement whose tier has no rate on that card is unpriceable and must be accompanied by a rate row.",
+      "page": 138,
+      "rule_id": "7.7-R07"
+    },
+    {
+      "n": 8,
+      "text": "Resolution order is card, placement, season, rate, then per-member overrides.",
+      "page": 138,
+      "rule_id": "7.7-R08"
+    },
+    {
+      "n": 9,
+      "text": "A vehicle with no placement on a member\u2019s card cannot be priced for that member.",
+      "page": 138,
+      "rule_id": "7.7-R09"
+    },
+    {
+      "n": 10,
+      "text": "A vehicle missing a placement on a card cannot be priced for members on that card.",
+      "page": 138,
+      "rule_id": "7.7-R10"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "One car, two tiers, two cards. The case the structure exists for. A member on the 2019 card sees it where it was; a member on the current card sees it where it is now.",
+      "page": 138
+    },
+    {
+      "n": 2,
+      "text": "A car added after a card was published. Add a placement for it on that card, at whatever tier suits members on that card. They can reserve it and every price they already had is untouched. This is the case the append rule exists for.",
+      "page": 138
+    },
+    {
+      "n": 3,
+      "text": "A car placed in different tiers on two cards. Deliberate and useful. A member on a 2019 card may see a new McLaren a tier lower than a member on the current card, which is a commercial decision rather than an inconsistency.",
+      "page": 138
+    },
+    {
+      "n": 4,
+      "text": "A car retired from the fleet. Placements stay, because historical trips reference them. The car simply stops being available.",
+      "page": 138
+    },
+    {
+      "n": 5,
+      "text": "A member with a tier assignment override. Their car sits in a different tier from everybody else\u2019s, and the price follows from that tier on their card.",
+      "page": 138
+    },
+    {
+      "n": 6,
+      "text": "A member with a point rate override. Same tier, different price. The two overrides are independent and a member may hold both.",
+      "page": 139
+    },
+    {
+      "n": 7,
+      "text": "A seasonal card and a trip spanning a season boundary. The rule for which season prices it belongs with settlement, not here, but the mapping must be able to answer for either date.",
+      "page": 139
+    },
+    {
+      "n": 8,
+      "text": "A placement with no rate row for its tier. The car is placed and unpriceable. Validate that every placed tier has a rate on the same card.",
+      "page": 139
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Five lookups, in order. Card, placement, season, rate, overrides. Write it as one resolver taking a member, a vehicle, and a date, and use it everywhere. Two implementations will diverge and the difference will be money.",
+      "page": 139
+    },
+    {
+      "n": 2,
+      "text": "Everything takes a date. The card pointer, the placement, and the season are all dated. Pass the trip date through the whole chain rather than reading now at any step.",
+      "page": 139
+    },
+    {
+      "n": 3,
+      "text": "Placement is per card. A vehicle_tier column on the vehicle itself would look simpler and would destroy the ability to price a grandfathered member correctly.",
+      "page": 139
+    },
+    {
+      "n": 4,
+      "text": "Validate placement against rates. A placed tier with no rate on the same card is unpriceable and will fail at settlement, which is the worst moment to find out.",
+      "page": 139
+    },
+    {
+      "n": 5,
+      "text": "Append, never amend, here too. An existing placement on a used card is permanent. An insert for a vehicle the card does not cover is not a change and is safe, because no settled trip could reference it.Placement is per card and the tier is a choice, but the choice is collected per series. The vehicle intake form shows every active membership series and no cards at all. Resolving a series answer to every card in that series lineage still held by an active package is the system\u2019s job, and resolving only the current card silently excludes exactly the long- standing members the append rule exists to protect.",
+      "page": 139
+    },
+    {
+      "n": 6,
+      "text": "A placement needs a rate. Adding a placement for a tier the card does not price leaves the car unpriceable. Add both together or validate for the pair.",
+      "page": 139
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Placement",
+      "text": "A vehicle can sit in different tiers on two different cards at the same time.",
+      "page": 140,
+      "item_id": "7.7-C01",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Placement",
+      "text": "A placement change on an unused card is permitted.",
+      "page": 140,
+      "item_id": "7.7-C02",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Placement",
+      "text": "An edit to an existing placement on a card in use is refused.",
+      "page": 140,
+      "item_id": "7.7-C03",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Placement",
+      "text": "A placement for a vehicle not yet on a used card can be added.",
+      "page": 140,
+      "item_id": "7.7-C04",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Placement",
+      "text": "A second placement for the same vehicle on the same card is refused.",
+      "page": 140,
+      "item_id": "7.7-C05",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Placement",
+      "text": "A placement added with a tier the card does not price is caught.",
+      "page": 140,
+      "item_id": "7.7-C06",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Placement",
+      "text": "Moving a car between tiers closes the current row and opens a new one.",
+      "page": 140,
+      "item_id": "7.7-C07",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Placement",
+      "text": "A placed tier with no rate row on the same card is flagged.",
+      "page": 140,
+      "item_id": "7.7-C08",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Resolution",
+      "text": "A price resolves through card, placement, season, and rate in that order.",
+      "page": 140,
+      "item_id": "7.7-C09",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Resolution",
+      "text": "The trip date is used at every dated step, not the current date.",
+      "page": 140,
+      "item_id": "7.7-C10",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Resolution",
+      "text": "A tier assignment override changes the tier for that member only.",
+      "page": 140,
+      "item_id": "7.7-C11",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Resolution",
+      "text": "A point rate override changes the price without changing the tier.",
+      "page": 140,
+      "item_id": "7.7-C12",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Resolution",
+      "text": "A member may hold both overrides at once.",
+      "page": 140,
+      "item_id": "7.7-C13",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Resolution",
+      "text": "A vehicle with no placement on the member\u2019s card cannot be priced.",
+      "page": 140,
+      "item_id": "7.7-C14",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "Adding a vehicle lists every active membership series with a tier to confirm for each, and no rate cards.",
+      "page": 140,
+      "item_id": "7.7-C15",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "A series answer writes a placement on every card in that series lineage still held by an active package.",
+      "page": 140,
+      "item_id": "7.7-C16",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "A member grandfathered on an older card of a series can reserve a vehicle added after that card was superseded.",
+      "page": 140,
+      "item_id": "7.7-C17",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "The tier defaults to the current card\u2019s choice and can be changed per card.",
+      "page": 140,
+      "item_id": "7.7-C18",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "A vehicle placed in different tiers on two cards prices differently for members on each.",
+      "page": 140,
+      "item_id": "7.7-C19",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "A vehicle added to every card in use is reservable by every member whose level reaches its tier.",
+      "page": 140,
+      "item_id": "7.7-C20",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "A retired vehicle keeps its placements so historical trips still price.",
+      "page": 140,
+      "item_id": "7.7-C21",
+      "guide_id": "7.7"
+    },
+    {
+      "group": "Fleet Changes",
+      "text": "A placement change shows the affected member count before saving.",
+      "page": 140,
+      "item_id": "7.7-C22",
+      "guide_id": "7.7"
+    }
+  ],
+  "checklist_count": 22
+}

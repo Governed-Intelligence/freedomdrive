@@ -1,0 +1,503 @@
+{
+  "guide_id": "7.6",
+  "chapter_no": 7,
+  "part_no": 2,
+  "title": "Vehicle Tier Rate Cards",
+  "page_start": 131,
+  "page_end": 135,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 2 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 7, section HOW RATE CARDS WORK",
+  "tables_referenced": [
+    "MEMBERSHIP_SERIES_RATE_CARD",
+    "MEMBER_PACKAGE_RATE",
+    "RATE_CARD",
+    "RATE_CARD_RATE",
+    "RATE_CARD_SEASON"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "A rate card is the member\u2019s price list. It shows what each vehicle tier costs in points for a weekday\nand for a weekend, how many miles come with the car, and what an extra mile costs. Every\nreservation and every trip settlement reads one.\nThe design decision that shapes everything: a card is append-only once it has been used. Nothing\nalready on a card may be changed, and a price change means a new card. What may be added is a\nplacement or a rate for a vehicle or tier the card does not yet cover, which is how a new car reaches\nevery member without anybody being repriced.\nThat immutability is what makes grandfathering possible without any rule for it. A member on the 2019\ncard stays on the 2019 card until somebody moves them, and the trips they took can always be priced\nexactly as they were priced at the time.\nPairs with How It Works chapter 7, section HOW RATE CARDS WORK.",
+    "schema_overview": "TABLES USED BY THIS GUIDE\n\nTable                                 Role in this guide\n\nRATE_CARD                             The card itself: code, name, and when it was first used.\n\nRATE_CARD_SEASON                      Optional seasons. No rows means the card is flat.\n\nRATE_CARD_RATE                        The prices, per card, tier, and season.\n\nMEMBERSHIP_SERIES_RATE_CARD The dated default for a series. Seeds a new package.\n\n                                      The dated pointer on a package. The authoritative answer for that\nMEMBER_PACKAGE_RATE\n                                      member.\n\n\n\n\nWHAT A RATE ROW CARRIES\n\nColumn                          Purpose\n\nweekday_point_value             What this tier costs for a single weekday.\n\nweekend_point_value             What it costs for a three-day weekend, as one bundled figure.\n\nextra_mile_point_value          What each mile beyond the allowance costs. Fractional, hence three decimals.",
+    "implementation_workflow": "1) Creating a Card\n    1. Create the RATE_CARD row with a code and a name that say what it is and when it applies,\n       because staff will refer to it by name for years.\n    2. Leave first_used_on empty until the card is actually used. Once it is populated the card is\n       immutable.\n    3. Add a rate row for every tier the card prices. A card missing a tier will fail at settlement for any\n       car in it.\n    4. Seasons are optional. No season rows means the card is flat, which is the default and the\n       common case.\n\n2) Adding Seasons\n    1. A season is a month and day range within the year, named so that staff recognize it.\n    2. Seasons repeat annually and carry no year, which is why they are stored as month and day\n       pairs.\n    3. Where seasons exist, every tier needs a rate row for every season. A gap means a date\n       nobody can price.\n    4. Seasons must not overlap, and together they should cover the year. A date falling in no\n       season has no price.\n\n3) Freezing a Card, and What May Still Be Added\n    1. The first time a package points at a card, set first_used_on. From that moment the card is\n       append-only.\n    2. Frozen: every existing rate row, every existing placement, the seasons, and the card record\n       itself. Refuse any edit to them.\n    3. Permitted: adding a placement for a vehicle the card does not yet cover, and adding a rate row\n       for a tier the card does not yet price.\n    4. An addition cannot disturb history. A trip taken before a vehicle existed cannot reference it,\n       and no trip could have been priced against a tier that had no rate. The guarantee the freeze\n       exists to protect is untouched.\n    5. Two guards keep an addition from becoming a change. A vehicle holds at most one placement\n       per card, so an addition can never be a disguised move. And a placement on a card in use is\n       never closed or superseded.\n    6. A price change to something already on the card still means a new card. Copy it, change what\n       differs, publish the new one, and move packages deliberately.\n    7. Enforce all of this at the persistence layer. A single edited rate makes every historical trip\n       priced under that card unexplainable.\n\n4) Assigning a Card to a Series\n    1. MEMBERSHIP_SERIES_RATE_CARD links a series to a card with an effective date.\n    2. A new package activating on or after that date seeds its own pointer from this link.\n    3. Changing the series link changes nothing about any existing package. It only changes what\n       future packages seed from.\n    4. Several dated links may exist for one series, which is how the club records that the series\n       moved from one card to another on a date.\n\n5) Moving a Package to a New Card\n    1. A package prices trips from MEMBER_PACKAGE_RATE, its own dated pointer. Nothing else.\n       The series link is only the seed: it supplies the pointer at activation and is never read again.\n       Resolving a price through the series instead would price a grandfathered member on whatever\n       card their series has since moved to, which is exactly what the design exists to prevent.\n    2. Moving a member to a new card means writing a new pointer row with an effective date. The\n       old row stays.\n    3. Because moving is deliberate, the club can simply not move somebody. That is how a member\n       is held on an earlier card as part of an individual deal: their pointer is left where it is while\n       everyone else\u2019s is advanced.\n    4. A trip is priced from the pointer effective on the trip date, so a mid-period move prices earlier\n       trips on the old card and later ones on the new.\n    5. Leaving a member where they are means writing nothing at all. Grandfathering costs no work,\n       which is why it is easy to do deliberately.\n    6. Moving every member to a new card is a batch of pointer rows, and the count of affected\n       members should be shown before it runs.\n\nEXAMPLE \u2014 WHY A PACKAGE HAS ITS OWN POINTER\n\nEvent                       Series link         Package pointer            What the member pays\n\nPackage activated 2019      2019 card           2019 card                  2019 prices\n\nSeries moved to 2024 card   2024 card           2019 card                  2019 prices, unchanged\n\nMember moved deliberately 2024 card             2024 card from that date   2024 prices from that date",
+    "rules_and_constraints": "    1. A card is append-only once first_used_on is set.\n    2. Nothing already on a card may be changed: rates, placements, seasons, and the card record\n       are all frozen.\n    3. Placements and rates may be added for vehicles and tiers the card does not yet cover.\n    4. A vehicle holds at most one placement per card, and a placement on a card in use is never\n       closed or superseded.\n    5. A price change to anything already on the card is a new card, never an edit.\n    6. Every tier the card prices needs a rate row; a missing tier fails at settlement.\n    7. No season rows means a flat card.\n    8. Where seasons exist they must not overlap, and every tier needs a rate for every season.\n    9. A weekend price is one bundled figure for the whole weekend, never a daily rate.\n    10. A package prices trips from its own pointer, never from the series link.\n    11. Changing a series link affects only future packages.\n    12. Moving a package to a new card is a new dated pointer row; the old row stays.\n    13. A trip is priced from the pointer effective on the trip date.",
+    "integration_and_edge_cases": "    1. A member on a card six years old. Entirely normal and the point of the design. Their trips\n       price exactly as they always have until somebody decides otherwise.\n    2. A card used by nobody. first_used_on is empty, so it can still be edited. This is how a card is\n       prepared before it goes live.\n    3. A vehicle added to the fleet after a card was published. Add a placement for it on that\n       card. Members on the old card can reserve it, at whatever tier the club chooses for that card,\n       and every price they already had is untouched.\n    4. A tier that no card in use prices. Add a rate row for it to each card that needs it. The same\n       append rule applies.\n    5. A mid-period card move. Trips before the pointer date price on the old card, trips after on the\n       new. That is why the pointer is dated rather than a simple column.\n    6. A seasonal card with a gap in coverage. A date in no season has no price. Validate that\n       seasons cover the year.\n    7. A card with seasons and a flat sibling. Both legitimate. Different series may sit on different\n       shapes of card.\n    8. A price correction to a card already in use. Not permitted. Publish a corrected card and\n       move the affected packages, which leaves a record of what happened.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                            Outcome\n\nPackage first points at a card     first_used_on set; the card becomes immutable.\n\nEdit attempted on a used card      Refused, with an offer to copy the card instead.\n\nSeries link changed                Future packages seed from the new card; existing packages untouched.\n\nPackages moved to a new card\n                                   Affected member count shown before the move runs.\nin bulk\n\nSettlement finding no rate for a\n                                   Surfaced as a gap rather than failing silently.\ntier\n\n\n\nReserved for the automations pass: whether members are told when their card changes, and how a\nmissing tier rate is escalated.",
+    "developer_notes": "    1. Append, never amend. Guard existing rates, placements, seasons, and the card record at\n       the persistence layer, and allow inserts for vehicles and tiers the card does not yet cover. The\n       distinction is the whole design: additions cannot reach a settled trip, changes can.\n    2. The pointer is the truth. Price from MEMBER_PACKAGE_RATE effective on the trip date.\n       Reading the series link at settlement would reprice every grandfathered member at once.\n    3. Copy for changes, append for additions. Two different flows. Confusing them is how a card\n       in use quietly acquires an edit.\n    4. Weekend is one figure. Never derive it from the weekday value, and never multiply it by\n       three. It is a bundled price.\n    5. Fractional extra-mile values. Three decimal places exist because a mile costs a fraction of a\n       point. Rounding at the wrong point produces settlements that disagree by a point.\n    6. Validate season coverage. Overlaps and gaps both produce a date with the wrong number of\n       prices. Check on save rather than at settlement.\n    7. Doing nothing is a decision. Leaving a member on an old card requires no rows, which\n       makes it invisible. Reporting should show who is on which card.",
+    "testing_checklist": "Card Creation and the Append Rule\n    \u2610 A card with no first_used_on can be edited freely.\n    \u2610 Setting first_used_on freezes existing rates, placements, seasons, and the card record.\n    \u2610 An edit to an existing rate on a used card is refused and offers a copy instead.\n    \u2610 A placement for a vehicle not yet on a used card can be added.\n    \u2610 A rate row for a tier not yet priced by a used card can be added.\n    \u2610 A second placement for the same vehicle on the same card is refused.\n    \u2610 Closing or superseding a placement on a used card is refused.\n    \u2610 Copying a card produces a new card with editable rates.\n\nRates and Seasons\n    \u2610 A card with no season rows prices every date the same.\n    \u2610 Overlapping seasons are refused.\n    \u2610 Seasons that leave a date uncovered are refused.\n    \u2610 A tier missing a rate row is surfaced before settlement needs it.\n    \u2610 A weekend price is a single bundled figure, not a multiple of the weekday value.\n    \u2610 An extra-mile value keeps its fractional precision through settlement.\n\nPointers and Grandfathering\n    \u2610 A new package seeds its pointer from the series link effective on its activation date.\n    \u2610 Changing the series link does not alter any existing package.\n    \u2610 A trip is priced from the pointer effective on the trip date.\n    \u2610 A mid-period card move prices earlier trips on the old card.\n    \u2610 A bulk move shows the affected member count before running.\n    \u2610 A member left on an old card is visible in reporting."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Creating a Card",
+      "page": 131,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Create the RATE_CARD row with a code and a name that say what it is and when it applies, because staff will refer to it by name for years.",
+          "page": 131
+        },
+        {
+          "n": 2,
+          "text": "Leave first_used_on empty until the card is actually used. Once it is populated the card is immutable.",
+          "page": 131
+        },
+        {
+          "n": 3,
+          "text": "Add a rate row for every tier the card prices. A card missing a tier will fail at settlement for any car in it.",
+          "page": 132
+        },
+        {
+          "n": 4,
+          "text": "Seasons are optional. No season rows means the card is flat, which is the default and the common case.",
+          "page": 132
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "Adding Seasons",
+      "page": 132,
+      "steps": [
+        {
+          "n": 1,
+          "text": "A season is a month and day range within the year, named so that staff recognize it.",
+          "page": 132
+        },
+        {
+          "n": 2,
+          "text": "Seasons repeat annually and carry no year, which is why they are stored as month and day pairs.",
+          "page": 132
+        },
+        {
+          "n": 3,
+          "text": "Where seasons exist, every tier needs a rate row for every season. A gap means a date nobody can price.",
+          "page": 132
+        },
+        {
+          "n": 4,
+          "text": "Seasons must not overlap, and together they should cover the year. A date falling in no season has no price.",
+          "page": 132
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "Freezing a Card, and What May Still Be Added",
+      "page": 132,
+      "steps": [
+        {
+          "n": 1,
+          "text": "The first time a package points at a card, set first_used_on. From that moment the card is append-only.",
+          "page": 132
+        },
+        {
+          "n": 2,
+          "text": "Frozen: every existing rate row, every existing placement, the seasons, and the card record itself. Refuse any edit to them.",
+          "page": 132
+        },
+        {
+          "n": 3,
+          "text": "Permitted: adding a placement for a vehicle the card does not yet cover, and adding a rate row for a tier the card does not yet price.",
+          "page": 132
+        },
+        {
+          "n": 4,
+          "text": "An addition cannot disturb history. A trip taken before a vehicle existed cannot reference it, and no trip could have been priced against a tier that had no rate. The guarantee the freeze exists to protect is untouched.",
+          "page": 132
+        },
+        {
+          "n": 5,
+          "text": "Two guards keep an addition from becoming a change. A vehicle holds at most one placement per card, so an addition can never be a disguised move. And a placement on a card in use is never closed or superseded.",
+          "page": 132
+        },
+        {
+          "n": 6,
+          "text": "A price change to something already on the card still means a new card. Copy it, change what differs, publish the new one, and move packages deliberately.",
+          "page": 132
+        },
+        {
+          "n": 7,
+          "text": "Enforce all of this at the persistence layer. A single edited rate makes every historical trip priced under that card unexplainable.",
+          "page": 132
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "Assigning a Card to a Series",
+      "page": 132,
+      "steps": [
+        {
+          "n": 1,
+          "text": "MEMBERSHIP_SERIES_RATE_CARD links a series to a card with an effective date.",
+          "page": 132
+        },
+        {
+          "n": 2,
+          "text": "A new package activating on or after that date seeds its own pointer from this link.",
+          "page": 132
+        },
+        {
+          "n": 3,
+          "text": "Changing the series link changes nothing about any existing package. It only changes what future packages seed from.",
+          "page": 132
+        },
+        {
+          "n": 4,
+          "text": "Several dated links may exist for one series, which is how the club records that the series moved from one card to another on a date.",
+          "page": 132
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "title": "Moving a Package to a New Card",
+      "page": 132,
+      "steps": [
+        {
+          "n": 1,
+          "text": "A package prices trips from MEMBER_PACKAGE_RATE, its own dated pointer. Nothing else. The series link is only the seed: it supplies the pointer at activation and is never read again. Resolving a price through the series instead would price a grandfathered member on whatever card their series has since moved to, which is exactly what the design exists to prevent.",
+          "page": 132
+        },
+        {
+          "n": 2,
+          "text": "Moving a member to a new card means writing a new pointer row with an effective date. The old row stays.",
+          "page": 133
+        },
+        {
+          "n": 3,
+          "text": "Because moving is deliberate, the club can simply not move somebody. That is how a member is held on an earlier card as part of an individual deal: their pointer is left where it is while everyone else\u2019s is advanced.",
+          "page": 133
+        },
+        {
+          "n": 4,
+          "text": "A trip is priced from the pointer effective on the trip date, so a mid-period move prices earlier trips on the old card and later ones on the new.",
+          "page": 133
+        },
+        {
+          "n": 5,
+          "text": "Leaving a member where they are means writing nothing at all. Grandfathering costs no work, which is why it is easy to do deliberately.",
+          "page": 133
+        },
+        {
+          "n": 6,
+          "text": "Moving every member to a new card is a batch of pointer rows, and the count of affected members should be shown before it runs.",
+          "page": 133
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "A card is append-only once first_used_on is set.",
+      "page": 133,
+      "rule_id": "7.6-R01"
+    },
+    {
+      "n": 2,
+      "text": "Nothing already on a card may be changed: rates, placements, seasons, and the card record are all frozen.",
+      "page": 133,
+      "rule_id": "7.6-R02"
+    },
+    {
+      "n": 3,
+      "text": "Placements and rates may be added for vehicles and tiers the card does not yet cover.",
+      "page": 133,
+      "rule_id": "7.6-R03"
+    },
+    {
+      "n": 4,
+      "text": "A vehicle holds at most one placement per card, and a placement on a card in use is never closed or superseded.",
+      "page": 133,
+      "rule_id": "7.6-R04"
+    },
+    {
+      "n": 5,
+      "text": "A price change to anything already on the card is a new card, never an edit.",
+      "page": 133,
+      "rule_id": "7.6-R05"
+    },
+    {
+      "n": 6,
+      "text": "Every tier the card prices needs a rate row; a missing tier fails at settlement.",
+      "page": 133,
+      "rule_id": "7.6-R06"
+    },
+    {
+      "n": 7,
+      "text": "No season rows means a flat card.",
+      "page": 133,
+      "rule_id": "7.6-R07"
+    },
+    {
+      "n": 8,
+      "text": "Where seasons exist they must not overlap, and every tier needs a rate for every season.",
+      "page": 133,
+      "rule_id": "7.6-R08"
+    },
+    {
+      "n": 9,
+      "text": "A weekend price is one bundled figure for the whole weekend, never a daily rate.",
+      "page": 133,
+      "rule_id": "7.6-R09"
+    },
+    {
+      "n": 10,
+      "text": "A package prices trips from its own pointer, never from the series link.",
+      "page": 133,
+      "rule_id": "7.6-R10"
+    },
+    {
+      "n": 11,
+      "text": "Changing a series link affects only future packages.",
+      "page": 133,
+      "rule_id": "7.6-R11"
+    },
+    {
+      "n": 12,
+      "text": "Moving a package to a new card is a new dated pointer row; the old row stays.",
+      "page": 133,
+      "rule_id": "7.6-R12"
+    },
+    {
+      "n": 13,
+      "text": "A trip is priced from the pointer effective on the trip date.",
+      "page": 133,
+      "rule_id": "7.6-R13"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A member on a card six years old. Entirely normal and the point of the design. Their trips price exactly as they always have until somebody decides otherwise.",
+      "page": 133
+    },
+    {
+      "n": 2,
+      "text": "A card used by nobody. first_used_on is empty, so it can still be edited. This is how a card is prepared before it goes live.",
+      "page": 133
+    },
+    {
+      "n": 3,
+      "text": "A vehicle added to the fleet after a card was published. Add a placement for it on that card. Members on the old card can reserve it, at whatever tier the club chooses for that card, and every price they already had is untouched.",
+      "page": 134
+    },
+    {
+      "n": 4,
+      "text": "A tier that no card in use prices. Add a rate row for it to each card that needs it. The same append rule applies.",
+      "page": 134
+    },
+    {
+      "n": 5,
+      "text": "A mid-period card move. Trips before the pointer date price on the old card, trips after on the new. That is why the pointer is dated rather than a simple column.",
+      "page": 134
+    },
+    {
+      "n": 6,
+      "text": "A seasonal card with a gap in coverage. A date in no season has no price. Validate that seasons cover the year.",
+      "page": 134
+    },
+    {
+      "n": 7,
+      "text": "A card with seasons and a flat sibling. Both legitimate. Different series may sit on different shapes of card.",
+      "page": 134
+    },
+    {
+      "n": 8,
+      "text": "A price correction to a card already in use. Not permitted. Publish a corrected card and move the affected packages, which leaves a record of what happened.",
+      "page": 134
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Append, never amend. Guard existing rates, placements, seasons, and the card record at the persistence layer, and allow inserts for vehicles and tiers the card does not yet cover. The distinction is the whole design: additions cannot reach a settled trip, changes can.",
+      "page": 134
+    },
+    {
+      "n": 2,
+      "text": "The pointer is the truth. Price from MEMBER_PACKAGE_RATE effective on the trip date. Reading the series link at settlement would reprice every grandfathered member at once.",
+      "page": 134
+    },
+    {
+      "n": 3,
+      "text": "Copy for changes, append for additions. Two different flows. Confusing them is how a card in use quietly acquires an edit.",
+      "page": 134
+    },
+    {
+      "n": 4,
+      "text": "Weekend is one figure. Never derive it from the weekday value, and never multiply it by three. It is a bundled price.",
+      "page": 134
+    },
+    {
+      "n": 5,
+      "text": "Fractional extra-mile values. Three decimal places exist because a mile costs a fraction of a point. Rounding at the wrong point produces settlements that disagree by a point.",
+      "page": 134
+    },
+    {
+      "n": 6,
+      "text": "Validate season coverage. Overlaps and gaps both produce a date with the wrong number of prices. Check on save rather than at settlement.",
+      "page": 135
+    },
+    {
+      "n": 7,
+      "text": "Doing nothing is a decision. Leaving a member on an old card requires no rows, which makes it invisible. Reporting should show who is on which card.",
+      "page": 135
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "A card with no first_used_on can be edited freely.",
+      "page": 135,
+      "item_id": "7.6-C01",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "Setting first_used_on freezes existing rates, placements, seasons, and the card record.",
+      "page": 135,
+      "item_id": "7.6-C02",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "An edit to an existing rate on a used card is refused and offers a copy instead.",
+      "page": 135,
+      "item_id": "7.6-C03",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "A placement for a vehicle not yet on a used card can be added.",
+      "page": 135,
+      "item_id": "7.6-C04",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "A rate row for a tier not yet priced by a used card can be added.",
+      "page": 135,
+      "item_id": "7.6-C05",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "A second placement for the same vehicle on the same card is refused.",
+      "page": 135,
+      "item_id": "7.6-C06",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "Closing or superseding a placement on a used card is refused.",
+      "page": 135,
+      "item_id": "7.6-C07",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Card Creation and the Append Rule",
+      "text": "Copying a card produces a new card with editable rates.",
+      "page": 135,
+      "item_id": "7.6-C08",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Rates and Seasons",
+      "text": "A card with no season rows prices every date the same.",
+      "page": 135,
+      "item_id": "7.6-C09",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Rates and Seasons",
+      "text": "Overlapping seasons are refused.",
+      "page": 135,
+      "item_id": "7.6-C10",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Rates and Seasons",
+      "text": "Seasons that leave a date uncovered are refused.",
+      "page": 135,
+      "item_id": "7.6-C11",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Rates and Seasons",
+      "text": "A tier missing a rate row is surfaced before settlement needs it.",
+      "page": 135,
+      "item_id": "7.6-C12",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Rates and Seasons",
+      "text": "A weekend price is a single bundled figure, not a multiple of the weekday value.",
+      "page": 135,
+      "item_id": "7.6-C13",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Rates and Seasons",
+      "text": "An extra-mile value keeps its fractional precision through settlement.",
+      "page": 135,
+      "item_id": "7.6-C14",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Pointers and Grandfathering",
+      "text": "A new package seeds its pointer from the series link effective on its activation date.",
+      "page": 135,
+      "item_id": "7.6-C15",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Pointers and Grandfathering",
+      "text": "Changing the series link does not alter any existing package.",
+      "page": 135,
+      "item_id": "7.6-C16",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Pointers and Grandfathering",
+      "text": "A trip is priced from the pointer effective on the trip date.",
+      "page": 135,
+      "item_id": "7.6-C17",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Pointers and Grandfathering",
+      "text": "A mid-period card move prices earlier trips on the old card.",
+      "page": 135,
+      "item_id": "7.6-C18",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Pointers and Grandfathering",
+      "text": "A bulk move shows the affected member count before running.",
+      "page": 135,
+      "item_id": "7.6-C19",
+      "guide_id": "7.6"
+    },
+    {
+      "group": "Pointers and Grandfathering",
+      "text": "A member left on an old card is visible in reporting.",
+      "page": 135,
+      "item_id": "7.6-C20",
+      "guide_id": "7.6"
+    }
+  ],
+  "checklist_count": 20
+}

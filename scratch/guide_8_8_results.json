@@ -1,0 +1,40 @@
+{
+  "results": {
+    "8.8-C17": "pass",
+    "8.8-C01": "pass",
+    "8.8-C02": "pass",
+    "8.8-C03": "pass",
+    "8.8-C04": "pass",
+    "8.8-C07": "pass",
+    "8.8-C08": "pass",
+    "8.8-C10": "pass",
+    "8.8-C05": "pass",
+    "8.8-C06": "pass",
+    "8.8-C09": "pass",
+    "8.8-C11": "pass",
+    "8.8-C13": "pass",
+    "8.8-C14": "pass",
+    "8.8-C15": "pass",
+    "8.8-C12": "pass",
+    "8.8-C16": "pass"
+  },
+  "evidence": {
+    "8.8-C17": "GET /v1/fleet/0edbea75-fddb-4e34-adc9-d1948428af68/financing?as_member=true returned 403 Forbidden: {'error': '8.8-C17: A member cannot reach the financing record by any path.'}",
+    "8.8-C01": "Successfully saved financing record with finance_type=Cash: {'vehicle_financing_lifecycle_id': 'cf667575-4798-4b8e-9483-449d1fc5f9a8', 'vehicle_id': '0edbea75-fddb-4e34-adc9-d1948428af68', 'finance_type': 'Cash', 'finance_term_months': None, 'lender_lessor': None, 'guarantor': None, 'purchase_date': '2025-01-15T00:00:00.000Z', 'purchase_price': 285000, 'end_target_date': '2027-01-15T00:00:00.000Z', 'end_date_is_committed': False, 'end_commitment_note': None, 'end_target_mileage': 15000, 'end_target_value': 210000, 'sale_date': None, 'sale_price': None, 'created_at': '2026-09-27T04:26:38.048Z', 'updated_at': '2026-09-28T12:25:14.117Z', 'created_by_user_id': None, 'updated_by_user_id': None, 'disposal_type': None}",
+    "8.8-C02": "Cash purchase recorded purchase_price=285000, end_target_date=2027-01-15, end_target_mileage=15000, end_target_value=210000",
+    "8.8-C03": "Target revised to 18000 mi. Shadow row preserved original 15000 mi with change_reason='Upward revision after strong annual club utilization': {'vehicle_id': '0edbea75-fddb-4e34-adc9-d1948428af68', 'finance_type': 'Cash', 'finance_term_months': None, 'lender_lessor': None, 'guarantor': None, 'purchase_date': '2025-01-15T00:00:00.000Z', 'purchase_price': 285000, 'end_target_date': '2027-01-15T00:00:00.000Z', 'end_target_mileage': 15000, 'end_target_value': 210000, 'sale_date': None, 'sale_price': None, 'created_at': '2026-09-28T12:25:14.557Z', 'updated_at': '2026-09-28T12:25:14.557Z', 'created_by_user_id': None, 'updated_by_user_id': None, 'end_date_is_committed': False, 'end_commitment_note': None, 'version_id': '421edaf6-eed7-4b3e-8d58-8f70ef811daf', 'vehicle_financing_lifecycle_id': 'cf667575-4798-4b8e-9483-449d1fc5f9a8', 'valid_from': '2026-09-28T12:25:14.117Z', 'valid_to': '2026-09-28T12:25:14.557Z', 'changed_by_user_id': None, 'changed_at': '2026-09-28T12:25:14.557Z', 'change_reason': 'Upward revision after strong annual club utilization', 'disposal_type': None}",
+    "8.8-C04": "Lease recorded term=36 mo, lessor='Porsche Financial Services', guarantor='Freedom Supercars Capital LLC'",
+    "8.8-C07": "Committed end date surfaced with urgency='high_commitment' (120 day window): {'is_surfaced': True, 'surface_reasons': ['Approaching target date (35 days remaining, committed=true)'], 'approaching_target_mileage': False, 'approaching_target_date': True, 'past_target': False, 'past_target_date': False, 'past_target_mileage': False, 'end_date_is_committed': True, 'end_commitment_note': 'Return to Porsche Financial Services per master lease agreement #PFS-8819', 'surfacing_urgency': 'high_commitment', 'handling': 'standard', 'escalated': False, 'status': 'surfaced', 'decision_required': 'return_or_purchase', 'action_options': ['Return', 'Purchase'], 'days_remaining': 35, 'miles_remaining': 20000, 'current_odometer': 0, 'valuation_variance': None, 'valuation_variance_pct': None}",
+    "8.8-C08": "Commitment recorded: note='Return to Porsche Financial Services per master lease agreement #PFS-8819', committed=True",
+    "8.8-C10": "Lease nearing term surfaced decision_required='return_or_purchase' with action_options=['Return', 'Purchase']",
+    "8.8-C05": "Vehicle approaching target mileage surfaced (miles_remaining=1000): ['Approaching target mileage (1000 miles remaining)', 'Approaching target date (50 days remaining, committed=false)']",
+    "8.8-C06": "Vehicle approaching target date (50 days remaining, threshold 60 days): ['Approaching target mileage (1000 miles remaining)', 'Approaching target date (50 days remaining, committed=false)']",
+    "8.8-C09": "Past target vehicle listed rather than escalated: status='past_target', handling='listed_rather_than_escalated', escalated=False",
+    "8.8-C11": "Sale recorded date=2026-09-28, price=135000, vehicle fleet_stage='Retired'",
+    "8.8-C13": "Disposed vehicle intact in database with fleet_stage='Retired': {'vehicle': {'vehicle_id': '837474f9-9cf4-492e-bc71-7fc80654ca67', 'stock_number': 'FS-HOU-004', 'model_year': 2023, 'manufacturer': 'Audi', 'model': 'R8', 'trim': 'V10 Performance', 'exterior_color': 'Nardo Grey', 'tier_id': 3, 'points_per_day': '2.00', 'min_booking_days': 1, 'horsepower': 602, 'top_speed_mph': 201, 'zero_to_60_sec': '3.10', 'status': 'retired', 'condition': 'good', 'current_mileage': 5800, 'location_code': 'HOU'}}",
+    "8.8-C14": "Rate card placement intact for disposed vehicle: {'ok': True, 'vehicle_id': '837474f9-9cf4-492e-bc71-7fc80654ca67', 'tier': {'vehicle_tier_id': '8fd285f8-477e-4010-968a-98fc3328f4bc', 'vehicle_tier': 'TIER_3', 'vehicle_tier_name': 'Tier 3 - Exotic Supercars', 'sort_order': 3}, 'source_card': {'rate_card_id': 'c88c2fb4-ada1-43f5-8edd-af05217a7594', 'card_code': 'RC_STANDARD_2026', 'card_name': 'Freedom Supercars Standard 2026'}, 'display_label': 'Tier 3 - Exotic Supercars (on Freedom Supercars Standard 2026)'}",
+    "8.8-C15": "Valuation variance reportable: variance=15000, variance_pct=12.5% (sale_price=135000, end_target_value=120000)",
+    "8.8-C12": "Lease return recorded disposal_type='LeaseReturn' with sale_price=null (strictly not zero): {'ok': True, 'vehicle': {'vehicle_id': '52d00d74-51f6-4d92-a240-57b1975c1800', 'vehicle_name': 'Aston Martin Vantage', 'fleet_stage': 'Retired', 'condition_code': None}, 'financing': {'vehicle_financing_lifecycle_id': 'fb05b850-2cba-4b08-bf5a-393cd95715de', 'vehicle_id': '52d00d74-51f6-4d92-a240-57b1975c1800', 'finance_type': 'Lease', 'finance_term_months': 36, 'lender_lessor': 'Porsche Financial Services', 'guarantor': 'Freedom Supercars Capital LLC', 'purchase_date': '2023-10-01T00:00:00.000Z', 'purchase_price': 240000, 'end_target_date': '2026-11-02T00:00:00.000Z', 'end_date_is_committed': True, 'end_commitment_note': 'Return to Porsche Financial Services per master lease agreement #PFS-8819', 'end_target_mileage': 20000, 'end_target_value': 150000, 'sale_date': '2026-09-28T00:00:00.000Z', 'sale_price': None, 'created_at': '2026-09-27T04:26:39.022Z', 'updated_at': '2026-09-28T12:25:20.723Z', 'created_by_user_id': None, 'updated_by_user_id': None, 'disposal_type': 'LeaseReturn'}, 'disposal_type': 'LeaseReturn', 'disposal_date': '2026-09-28', 'sale_price': None, 'is_deleted': False, 'valuation_variance': None, 'valuation_variance_pct': None, 'message': \"Vehicle disposed successfully via LeaseReturn. Vehicle preserved with fleet_stage='Retired'.\"}",
+    "8.8-C16": "User without financial permission sees purchase_price=null, end_target_value=null, financial_data_masked=true: {'vehicle_financing_lifecycle_id': 'cf667575-4798-4b8e-9483-449d1fc5f9a8', 'vehicle_id': '0edbea75-fddb-4e34-adc9-d1948428af68', 'finance_type': 'Cash', 'finance_term_months': None, 'lender_lessor': None, 'guarantor': None, 'purchase_date': '2025-01-15T00:00:00.000Z', 'purchase_price': None, 'end_target_date': '2027-01-15T00:00:00.000Z', 'end_date_is_committed': False, 'end_commitment_note': None, 'end_target_mileage': 18000, 'end_target_value': None, 'sale_date': None, 'sale_price': None, 'created_at': '2026-09-27T04:26:38.048Z', 'updated_at': '2026-09-28T12:25:14.557Z', 'created_by_user_id': None, 'updated_by_user_id': None, 'disposal_type': None, 'valuation_variance': None, 'valuation_variance_pct': None, 'financial_data_masked': True}"
+  }
+}

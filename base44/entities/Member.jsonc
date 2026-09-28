@@ -1,0 +1,144 @@
+{
+  "name": "Member",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string"
+    },
+    "preferred_name": {
+      "type": "string",
+      "description": "Name used in greetings and display; falls back to first name when empty (6.1 workflow 1.1, 6.3-C16)"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "member_seq": {
+      "type": "integer",
+      "description": "Club-wide sequential member sequence minted on first activation (6.3-R02, 6.3-R05, 6.3-C06)"
+    },
+    "member_number": {
+      "type": "string",
+      "description": "Authoritative format: YYYY-BRN-000-000 (e.g. 2009-HOU-000-005, 2026-HOU-000-001) minted on first activation (6.3-R02, 6.3-R04, 6.3-C05)"
+    },
+    "fs_member_id": {
+      "type": "string",
+      "description": "Freedom Supercars API member id, cached by fsGateway"
+    },
+    "plan_name": {
+      "type": "string"
+    },
+    "home_branch": {
+      "type": "string"
+    },
+    "home_branch_code": {
+      "type": "string",
+      "description": "Authoritative branch code (e.g. HOU, DFW, ATX) from BRANCH table (6.3-C05)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Active",
+        "Suspended",
+        "Inactive",
+        "Former",
+        "Voided"
+      ],
+      "default": "Pending",
+      "description": "Lifecycle status per guide 6.9 and Database Schema MEMBER.lifecycle_status. A saved member is Pending; first activation moves it to Active and mints member_number and member_since (6.1-R13, 6.3-R11)."
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Used for eligibility and by duplicate detection (6.1 workflow 1.2, 6.1-R04)"
+    },
+    "duplicate_reviewed_by": {
+      "type": "string",
+      "description": "Staff email that reviewed a duplicate flag and chose to proceed (6.1-C11)"
+    },
+    "duplicate_reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "duplicate_review_note": {
+      "type": "string",
+      "description": "Why the flagged match was judged a different person; kept so next person does not investigate again (6.1 edge case 9)"
+    },
+    "member_since": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of first activation, minted with member_number (6.3-R02, 6.3-C02)"
+    },
+    "license_number": {
+      "type": "string"
+    },
+    "license_state": {
+      "type": "string"
+    },
+    "license_expiry": {
+      "type": "string",
+      "format": "date"
+    },
+    "insurance_provider": {
+      "type": "string"
+    },
+    "insurance_policy": {
+      "type": "string"
+    },
+    "insurance_expiry": {
+      "type": "string",
+      "format": "date"
+    },
+    "preferred_pickup_time": {
+      "type": "string",
+      "description": "Member's preferred pickup time window, e.g. Morning, Afternoon, Evening"
+    },
+    "preferred_vehicle_color": {
+      "type": "string",
+      "description": "Member's preferred vehicle color choices"
+    },
+    "reservation_lock": {
+      "type": "string",
+      "description": "Transient lock token used by withEntityLock to serialize balance checks and prevent concurrent points double-spend across vehicles. Null when unlocked."
+    }
+  },
+  "required": [
+    "full_name",
+    "email"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "never"
+      }
+    }
+  }
+}

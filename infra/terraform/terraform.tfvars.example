@@ -1,0 +1,9 @@
+project_id  = "your-gcp-project-id"
+region      = "us-south1"
+environment = "prod"
+
+# Uncomment and set once you've pushed your first image:
+# api_image = "us-south1-docker.pkg.dev/your-gcp-project-id/freedom-supercars-prod-containers/api:v1.0.0"
+
+# Set via TF_VAR_anthropic_api_key and TF_VAR_stripe_secret_key env vars instead
+# of committing them here. This file should be gitignored anyway.

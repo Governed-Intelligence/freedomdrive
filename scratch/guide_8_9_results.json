@@ -1,0 +1,18 @@
+{
+  "results": {
+    "8.9-C01": "pass",
+    "8.9-C02": "pass",
+    "8.9-C03": "pass",
+    "8.9-C04": "pass",
+    "8.9-C05": "pass",
+    "8.9-C06": "pass"
+  },
+  "evidence": {
+    "8.9-C01": "Vehicle has no allowance row (is_unlimited=true). check-limit with odometer=999999 did not withhold: {'ok': True, 'has_allowance': False, 'is_unlimited': True, 'withheld_for_mileage': False, 'message': '8.9-C01: Vehicle has no mileage allowance and is unlimited.'}",
+    "8.9-C02": "First allocation created: starting_odometer=5000, monthly_miles=800, odometer_limit=5800 (starting + 1 month)",
+    "8.9-C03": "Month with 0 miles driven posted allocation: limit raised to 6600 (+800 mi)",
+    "8.9-C04": "Vehicle odometer 8500 exceeded limit 6600 + threshold 100. Withheld placed with code 'MileageLimit'. Existing reservations survived (not cancelled).",
+    "8.9-C05": "New limit raised to 7400, but odometer 8500 is >1 month ahead. Vehicle retained in withhold (is_withheld=True, withhold_action='retained')",
+    "8.9-C06": "Released MileageLimit withhold. Safety withhold remained active (other_withholds_intact=True): [{'reservation_withhold_id': '76d45844-16a0-49a9-a131-c522c909f705', 'branch_id': None, 'vehicle_id': '49ad8c7c-03fd-44e7-96f1-14ec05aaa2b2', 'withhold_reason_code': 'Safety', 'starts_on': '2026-09-28T00:00:00.000Z', 'ends_on': None, 'withhold_note': 'Manufacturer brake recall inspection required', 'placed_by_user_id': None, 'placed_at': '2026-09-28T12:26:08.810Z', 'released_by_user_id': None, 'released_at': None, 'release_note': None, 'created_at': '2026-09-28T12:26:08.810Z', 'updated_at': '2026-09-28T12:26:08.810Z', 'created_by_user_id': None, 'updated_by_user_id': None, 'label': 'Safety Recall/Hold'}]"
+  }
+}

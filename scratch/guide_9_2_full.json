@@ -1,0 +1,537 @@
+{
+  "guide_id": "9.2",
+  "chapter_no": 9,
+  "part_no": 3,
+  "title": "Creating a Member Reservation",
+  "page_start": 55,
+  "page_end": 59,
+  "source_file": "FreedomDRIVE - Implementation Guides Part 3 (08-12-2026).pdf",
+  "how_it_works_companion": "How It Works chapter 9, section HOW RESERVATIONS ARE CREATED AND MANAGED, topics Conditions That Must Be Met for a Car to Be Offered and Creating a Member Reservation",
+  "tables_referenced": [
+    "MEMBER_INSURANCE_POLICY",
+    "MEMBER_PACKAGE",
+    "MEMBER_PACKAGE_RATE",
+    "MEMBER_POINTS_LEDGER",
+    "RESERVATION_LOCATION_SELECT",
+    "VEHICLE_RESERVATION"
+  ],
+  "standard_structure": true,
+  "has_checklist": true,
+  "section_titles": {
+    "business_context": "Business Context and Purpose",
+    "schema_overview": "Schema Overview and Key Structures",
+    "implementation_workflow": "Implementation Workflow",
+    "rules_and_constraints": "Rules and Constraints",
+    "integration_and_edge_cases": "Integration and Edge Cases",
+    "automations_and_notifications": "Automations and Notifications",
+    "developer_notes": "Developer Notes and Considerations",
+    "testing_checklist": "Testing Checklist"
+  },
+  "sections": {
+    "business_context": "A member reservation has to earn its confirmation. Six groups of checks run in one pass, and only\nwhen every one of them passes does the booking confirm and the points post.\nThe order matters, because refusing early on something cheap to check is better than computing a\nprice for a car the member could never have had.\nPairs with How It Works chapter 9, section HOW RESERVATIONS ARE CREATED AND MANAGED,\ntopics Conditions That Must Be Met for a Car to Be Offered and Creating a Member Reservation.",
+    "schema_overview": "TABLES USED BY THIS GUIDE\n\nTable                                Role in this guide\n\nVEHICLE_RESERVATION                  The booking being created.\n\nMEMBER_PACKAGE                       Which package the booking draws from, and every limit that applies.\n\nMEMBER_PACKAGE_RATE                  The dated pointer to the card that prices this package\u2019s trips.\n\nMEMBER_INSURANCE_POLICY              Verified through the trip dates.\n\nMEMBER_POINTS_LEDGER                 Where the confirmation charge is posted.\n\nRESERVATION_LOCATION_SELECT The authorized locations a handover may happen at.",
+    "implementation_workflow": "1) Is the Vehicle Available to This Member at All\n    1. Four things, all of which must pass, and they come before any of the member\u2019s own rules.\n    2. It is part of the club\u2019s fleet: fleet stage Fleet, intake complete. A vehicle Incoming, part-way\n       through Intake, or Retired is not in the reservation system at all.\n    3. It is visible in the reservation system: past its launch date, or the requester is staff. A vehicle in\n       pre-launch is bookable only by staff. After launch, a member below the current release row\u2019s\n       minimum status may see it marked with the date it opens to them and still not be able to book\n       it themselves.\n    4. It is ready: condition Ready. A vehicle just Returned by a member, or in Prep having its\n       turnaround done, is not yet able to go out.\n    5. It is available for the dates: no reservation of any type overlaps, no restricted date sits at either\n       end, and no withhold covers the window.\n    6. Also check the member-specific restrictions - exclusion, named list, qualification - which make\n       the vehicle absent rather than refused. See the Vehicle Access Restrictions guide.\n\n2) The Member Check\n    1. The membership must be active across the reservation dates, not merely today. A package\n       ending mid-trip must not be bookable for that trip.\n    2. The insurance must be valid through the entire trip. An expired policy stops a new booking\n       before anything else is considered.\n    3. Where the member holds more than one package, require an explicit choice. Never default,\n       because the packages may hold different rate cards and different limits.\n\n3) The Access Check\n    1. The vehicle\u2019s tier must be within the package\u2019s tier access, and the branch within the branches\n       the membership covers.\n    2. A member whose plan reaches through Tier 3 never reaches the confirmation step on a Tier 4\n       car, no matter how many points they hold. Points and access are different questions.\n\n4) The Booking-Rules Check\n    1. Simultaneous bookings, maximum active reservations, monthly and yearly counts, the booking\n       window, and whether the dates use one of the member\u2019s advance reservations. All are\n       specified in the Booking Limits and Advance Reservations guide.\n    2. Read every limit from the package, never from the level. The package holds the snapshot and\n       any customization already applied.\n\n5) The Price Check\n    1. Resolve the card through MEMBER_PACKAGE_RATE, the package\u2019s own dated pointer,\n       effective on the trip date. Never through the series link, which only seeded that pointer at\n       activation.\n    2. Weekday dates charge the tier\u2019s weekday rate, per day.\n    3. A friday-through-Monday weekend charges the single weekend rate, once. It is never three\n       weekday rates unless the card happens to price it that way.\n    4. A mixed trip combines the two. Thursday through Monday is one weekday plus the weekend.\n    5. Save the estimate on the reservation broken into its weekday and weekend parts, so the\n       member sees exactly what the trip will cost before confirming and so settlement has\n       something to compare against.\n\n6) The Points Check\n    1. Two gates, both from the package. The cost must fit the available balance including spend-\n       ahead, and must sit within the monthly cap for the month the trip ends in.\n    2. Both are specified in the Points Gates and Spend-Ahead guide.\n\n7) Confirming\n    1. Confirmation posts the estimated cost to the points ledger as a real charge. That is why a\n       cancellation has something to reverse, and why a member cannot hold a dozen bookings they\n       could never pay for.\n    2. Record the full context: member, package, vehicle, branch, scheduled start and end, and the\n       source of the booking - member portal, staff, automation, or import - along with who created it.\n    3. Set the handover types and their authorized locations. See the Reservation Logistics section\n       below.\n    4. Notify the member. Nothing is sent to the branch: preparation follows the vehicle\u2019s condition\n       when it returns, not the booking.\n\n8) Handover Logistics\n    1. Four ways, two at each end. Pickup: the member comes to the showroom. Delivery: the club\n       brings the car to them. Return: the member brings it back. Collection: the club retrieves it.\n    2. Each is paired with an authorized location from the standard list, so there is never ambiguity\n       about where an exchange happens.\n    3. Where a complimentary delivery perk covers a delivery, record that application on the\n       reservation.\n\n9) Courtesy and Promotional Bookings\n    1. A booking marked with counts_toward_limits false occupies the car exactly like any other\n       reservation but consumes none of the member\u2019s reservations, cancellation allowance, or\n       advance reservations.\n    2. This is how a comped drive, a goodwill gesture after something went wrong, or a promotional\n       experience is recorded. A gesture from the club should never quietly cost the member\n       something.\n\n10) Booking for a Member Who Has Not Started\n    1. Staff can place a reservation against a member whose membership has not been activated -\n       the birthday delivery bought as a gift.\n    2. It is held as a tentative booking and converts automatically when the membership activates.\n       See the Member Management chapter.\n\n11) Where the Car Changes Hands\n    1. Both ends of the booking record how the car changes hands (Pickup, Delivery, Return,\n       Collection) and where, from the authorized location list.\n    2. Where the location is a member address, record which one. Write\n       vehicle_reservation.member_address_id. A member commonly keeps a home and an office;\n       the crew needs the building type, the gate code and the staging note that belong to the\n       address they are actually going to.\n    3. Leave it empty where both ends are a branch or another authorized location. It is a delivery\n       and collection field, not a general one.\n    4. The address chosen is what the delivery quote is measured to, so the quote, the charge and\n       the crew instructions all refer to the same place.",
+    "rules_and_constraints": "    1. All four vehicle conditions must pass before any member rule is evaluated.\n    2. The membership must be active across the whole reservation, not merely today.\n    3. Insurance must be valid through the entire trip; an expired policy refuses the booking first.\n    4. Where a member holds several packages, the choice is explicit and never defaulted.\n    5. Tier and branch access are checked independently of points.\n    6. Pricing resolves through the package\u2019s dated card pointer, never the series link.\n    7. A weekend charges one bundled rate; weekdays charge per day; a mixed trip combines them.\n    8. The estimate is stored broken into its weekday and weekend parts.\n    9. Confirmation posts a real charge to the points ledger.\n    10. A courtesy booking occupies the calendar and consumes no allowance.",
+    "integration_and_edge_cases": "    1. A member whose package ends the day before their trip returns. Refused: the membership is\n       not active across the dates.\n    2. A member whose insurance expires mid-trip. Refused, and refused first, so they are told\n       the real reason rather than a points message.\n    3. A member with two packages. Asked which. The same car may cost different points under\n       each.\n    4. A thursday-to-Monday trip. One weekday plus one weekend, stored as two parts.\n    5. A tier 4 car and a Tier 3 member with fifty thousand points. Never offered. Access is not a\n       pricing question.\n    6. A comped drive after a delivery went wrong. Marked so it consumes nothing, and it still\n       blocks the car on the calendar.\n    7. A gift booked against a Pending member. Tentative, converts at activation, and falls with\n       the enrollment if the member never activates.",
+    "automations_and_notifications": "Each automation below is listed with its trigger and its expected outcome. Operational specification is\nreserved for the automations pass that follows the first draft of all chapters.\n\nAUTOMATIONS IN THIS GUIDE\n\nTrigger                         Outcome\n\n                                Points charge posted; member notified. Nothing is sent to the branch: a car is\nReservation confirmed\n                                prepared when it returns, not when it is booked.\n\nMembership activated with\n                                Those bookings converted to confirmed.\ntentative bookings held\n\nInsurance expiring before a\n                                Hold placed on the reservation and a task raised.\nbooked trip\n\n\n\nReserved for the automations pass: how far ahead the branch is notified, and whether the member\nreceives a reminder before the trip.",
+    "developer_notes": "    1. Order the checks by cost and by clarity. Insurance and membership are cheap and\n       produce a message the member can act on; pricing is expensive and produces a message\n       that would be misleading if the real problem was access.\n    2. Never default the package. It is the single most tempting shortcut here and it produces a\n       member charged from the wrong card, discovered weeks later.\n    3. Store the estimate in parts. A single total cannot be reconciled against a settlement that\n       recomputes weekdays and weekends separately.\n    4. The confirmation charge is real. Building it as a reservation of intent rather than a ledger\n       entry breaks cancellation, the monthly cap, and the member\u2019s balance all at once.",
+    "testing_checklist": "Vehicle conditions\n    \u2610 A vehicle at Incoming cannot be booked.\n    \u2610 A vehicle in pre-launch cannot be booked by a member.\n    \u2610 A vehicle in pre-launch can be booked by staff.\n    \u2610 A vehicle at condition Prep cannot be booked.\n    \u2610 A vehicle with a withhold covering the dates cannot be booked.\n\nMember checks\n    \u2610 A membership ending mid-trip refuses the booking.\n    \u2610 Insurance expiring mid-trip refuses the booking.\n    \u2610 The insurance message is returned before any points message.\n    \u2610 A member with two packages is asked which.\n\nPricing\n    \u2610 A weekday trip charges the weekday rate per day.\n    \u2610 A friday-to-Monday trip charges one weekend rate.\n    \u2610 A thursday-to-Monday trip charges one weekday plus one weekend.\n    \u2610 The estimate is stored broken into weekday and weekend parts.\n    \u2610 The card is resolved from the package pointer, not the series.\n\nConfirmation\n    \u2610 Confirming posts a charge to the points ledger.\n    \u2610 A courtesy booking consumes no allowance and still blocks the car.\n    \u2610 A booking against a Pending member is created tentative."
+  },
+  "workflow": [
+    {
+      "n": 1,
+      "title": "Is the Vehicle Available to This Member at All",
+      "page": 55,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Four things, all of which must pass, and they come before any of the member\u2019s own rules.",
+          "page": 55
+        },
+        {
+          "n": 2,
+          "text": "It is part of the club\u2019s fleet: fleet stage Fleet, intake complete. A vehicle Incoming, part-way through Intake, or Retired is not in the reservation system at all.",
+          "page": 55
+        },
+        {
+          "n": 3,
+          "text": "It is visible in the reservation system: past its launch date, or the requester is staff. A vehicle in pre-launch is bookable only by staff. After launch, a member below the current release row\u2019s minimum status may see it marked with the date it opens to them and still not be able to book it themselves.",
+          "page": 55
+        },
+        {
+          "n": 4,
+          "text": "It is ready: condition Ready. A vehicle just Returned by a member, or in Prep having its turnaround done, is not yet able to go out.",
+          "page": 55
+        },
+        {
+          "n": 5,
+          "text": "It is available for the dates: no reservation of any type overlaps, no restricted date sits at either end, and no withhold covers the window.",
+          "page": 55
+        },
+        {
+          "n": 6,
+          "text": "Also check the member-specific restrictions - exclusion, named list, qualification - which make the vehicle absent rather than refused. See the Vehicle Access Restrictions guide.",
+          "page": 55
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "title": "The Member Check",
+      "page": 55,
+      "steps": [
+        {
+          "n": 1,
+          "text": "The membership must be active across the reservation dates, not merely today. A package ending mid-trip must not be bookable for that trip.",
+          "page": 55
+        },
+        {
+          "n": 2,
+          "text": "The insurance must be valid through the entire trip. An expired policy stops a new booking before anything else is considered.",
+          "page": 56
+        },
+        {
+          "n": 3,
+          "text": "Where the member holds more than one package, require an explicit choice. Never default, because the packages may hold different rate cards and different limits.",
+          "page": 56
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "title": "The Access Check",
+      "page": 56,
+      "steps": [
+        {
+          "n": 1,
+          "text": "The vehicle\u2019s tier must be within the package\u2019s tier access, and the branch within the branches the membership covers.",
+          "page": 56
+        },
+        {
+          "n": 2,
+          "text": "A member whose plan reaches through Tier 3 never reaches the confirmation step on a Tier 4 car, no matter how many points they hold. Points and access are different questions.",
+          "page": 56
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "title": "The Booking-Rules Check",
+      "page": 56,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Simultaneous bookings, maximum active reservations, monthly and yearly counts, the booking window, and whether the dates use one of the member\u2019s advance reservations. All are specified in the Booking Limits and Advance Reservations guide.",
+          "page": 56
+        },
+        {
+          "n": 2,
+          "text": "Read every limit from the package, never from the level. The package holds the snapshot and any customization already applied.",
+          "page": 56
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "title": "The Price Check",
+      "page": 56,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Resolve the card through MEMBER_PACKAGE_RATE, the package\u2019s own dated pointer, effective on the trip date. Never through the series link, which only seeded that pointer at activation.",
+          "page": 56
+        },
+        {
+          "n": 2,
+          "text": "Weekday dates charge the tier\u2019s weekday rate, per day.",
+          "page": 56
+        },
+        {
+          "n": 3,
+          "text": "A friday-through-Monday weekend charges the single weekend rate, once. It is never three weekday rates unless the card happens to price it that way.",
+          "page": 56
+        },
+        {
+          "n": 4,
+          "text": "A mixed trip combines the two. Thursday through Monday is one weekday plus the weekend.",
+          "page": 56
+        },
+        {
+          "n": 5,
+          "text": "Save the estimate on the reservation broken into its weekday and weekend parts, so the member sees exactly what the trip will cost before confirming and so settlement has something to compare against.",
+          "page": 56
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "title": "The Points Check",
+      "page": 56,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Two gates, both from the package. The cost must fit the available balance including spend- ahead, and must sit within the monthly cap for the month the trip ends in.",
+          "page": 56
+        },
+        {
+          "n": 2,
+          "text": "Both are specified in the Points Gates and Spend-Ahead guide.",
+          "page": 56
+        }
+      ]
+    },
+    {
+      "n": 7,
+      "title": "Confirming",
+      "page": 56,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Confirmation posts the estimated cost to the points ledger as a real charge. That is why a cancellation has something to reverse, and why a member cannot hold a dozen bookings they could never pay for.",
+          "page": 56
+        },
+        {
+          "n": 2,
+          "text": "Record the full context: member, package, vehicle, branch, scheduled start and end, and the source of the booking - member portal, staff, automation, or import - along with who created it.",
+          "page": 56
+        },
+        {
+          "n": 3,
+          "text": "Set the handover types and their authorized locations. See the Reservation Logistics section below.",
+          "page": 56
+        },
+        {
+          "n": 4,
+          "text": "Notify the member. Nothing is sent to the branch: preparation follows the vehicle\u2019s condition when it returns, not the booking.",
+          "page": 56
+        }
+      ]
+    },
+    {
+      "n": 8,
+      "title": "Handover Logistics",
+      "page": 57,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Four ways, two at each end. Pickup: the member comes to the showroom. Delivery: the club brings the car to them. Return: the member brings it back. Collection: the club retrieves it.",
+          "page": 57
+        },
+        {
+          "n": 2,
+          "text": "Each is paired with an authorized location from the standard list, so there is never ambiguity about where an exchange happens.",
+          "page": 57
+        },
+        {
+          "n": 3,
+          "text": "Where a complimentary delivery perk covers a delivery, record that application on the reservation.",
+          "page": 57
+        }
+      ]
+    },
+    {
+      "n": 9,
+      "title": "Courtesy and Promotional Bookings",
+      "page": 57,
+      "steps": [
+        {
+          "n": 1,
+          "text": "A booking marked with counts_toward_limits false occupies the car exactly like any other reservation but consumes none of the member\u2019s reservations, cancellation allowance, or advance reservations.",
+          "page": 57
+        },
+        {
+          "n": 2,
+          "text": "This is how a comped drive, a goodwill gesture after something went wrong, or a promotional experience is recorded. A gesture from the club should never quietly cost the member something.",
+          "page": 57
+        }
+      ]
+    },
+    {
+      "n": 10,
+      "title": "Booking for a Member Who Has Not Started",
+      "page": 57,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Staff can place a reservation against a member whose membership has not been activated - the birthday delivery bought as a gift.",
+          "page": 57
+        },
+        {
+          "n": 2,
+          "text": "It is held as a tentative booking and converts automatically when the membership activates. See the Member Management chapter.",
+          "page": 57
+        }
+      ]
+    },
+    {
+      "n": 11,
+      "title": "Where the Car Changes Hands",
+      "page": 57,
+      "steps": [
+        {
+          "n": 1,
+          "text": "Both ends of the booking record how the car changes hands (Pickup, Delivery, Return, Collection) and where, from the authorized location list.",
+          "page": 57
+        },
+        {
+          "n": 2,
+          "text": "Where the location is a member address, record which one. Write vehicle_reservation.member_address_id. A member commonly keeps a home and an office; the crew needs the building type, the gate code and the staging note that belong to the address they are actually going to.",
+          "page": 57
+        },
+        {
+          "n": 3,
+          "text": "Leave it empty where both ends are a branch or another authorized location. It is a delivery and collection field, not a general one.",
+          "page": 57
+        },
+        {
+          "n": 4,
+          "text": "The address chosen is what the delivery quote is measured to, so the quote, the charge and the crew instructions all refer to the same place.",
+          "page": 57
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "n": 1,
+      "text": "All four vehicle conditions must pass before any member rule is evaluated.",
+      "page": 57,
+      "rule_id": "9.2-R01"
+    },
+    {
+      "n": 2,
+      "text": "The membership must be active across the whole reservation, not merely today.",
+      "page": 57,
+      "rule_id": "9.2-R02"
+    },
+    {
+      "n": 3,
+      "text": "Insurance must be valid through the entire trip; an expired policy refuses the booking first.",
+      "page": 57,
+      "rule_id": "9.2-R03"
+    },
+    {
+      "n": 4,
+      "text": "Where a member holds several packages, the choice is explicit and never defaulted.",
+      "page": 57,
+      "rule_id": "9.2-R04"
+    },
+    {
+      "n": 5,
+      "text": "Tier and branch access are checked independently of points.",
+      "page": 57,
+      "rule_id": "9.2-R05"
+    },
+    {
+      "n": 6,
+      "text": "Pricing resolves through the package\u2019s dated card pointer, never the series link.",
+      "page": 57,
+      "rule_id": "9.2-R06"
+    },
+    {
+      "n": 7,
+      "text": "A weekend charges one bundled rate; weekdays charge per day; a mixed trip combines them.",
+      "page": 57,
+      "rule_id": "9.2-R07"
+    },
+    {
+      "n": 8,
+      "text": "The estimate is stored broken into its weekday and weekend parts.",
+      "page": 57,
+      "rule_id": "9.2-R08"
+    },
+    {
+      "n": 9,
+      "text": "Confirmation posts a real charge to the points ledger.",
+      "page": 57,
+      "rule_id": "9.2-R09"
+    },
+    {
+      "n": 10,
+      "text": "A courtesy booking occupies the calendar and consumes no allowance.",
+      "page": 58,
+      "rule_id": "9.2-R10"
+    }
+  ],
+  "edge_cases": [
+    {
+      "n": 1,
+      "text": "A member whose package ends the day before their trip returns. Refused: the membership is not active across the dates.",
+      "page": 58
+    },
+    {
+      "n": 2,
+      "text": "A member whose insurance expires mid-trip. Refused, and refused first, so they are told the real reason rather than a points message.",
+      "page": 58
+    },
+    {
+      "n": 3,
+      "text": "A member with two packages. Asked which. The same car may cost different points under each.",
+      "page": 58
+    },
+    {
+      "n": 4,
+      "text": "A thursday-to-Monday trip. One weekday plus one weekend, stored as two parts.",
+      "page": 58
+    },
+    {
+      "n": 5,
+      "text": "A tier 4 car and a Tier 3 member with fifty thousand points. Never offered. Access is not a pricing question.",
+      "page": 58
+    },
+    {
+      "n": 6,
+      "text": "A comped drive after a delivery went wrong. Marked so it consumes nothing, and it still blocks the car on the calendar.",
+      "page": 58
+    },
+    {
+      "n": 7,
+      "text": "A gift booked against a Pending member. Tentative, converts at activation, and falls with the enrollment if the member never activates.",
+      "page": 58
+    }
+  ],
+  "developer_notes": [
+    {
+      "n": 1,
+      "text": "Order the checks by cost and by clarity. Insurance and membership are cheap and produce a message the member can act on; pricing is expensive and produces a message that would be misleading if the real problem was access.",
+      "page": 58
+    },
+    {
+      "n": 2,
+      "text": "Never default the package. It is the single most tempting shortcut here and it produces a member charged from the wrong card, discovered weeks later.",
+      "page": 58
+    },
+    {
+      "n": 3,
+      "text": "Store the estimate in parts. A single total cannot be reconciled against a settlement that recomputes weekdays and weekends separately.",
+      "page": 58
+    },
+    {
+      "n": 4,
+      "text": "The confirmation charge is real. Building it as a reservation of intent rather than a ledger entry breaks cancellation, the monthly cap, and the member\u2019s balance all at once.",
+      "page": 58
+    }
+  ],
+  "checklist": [
+    {
+      "group": "Vehicle conditions",
+      "text": "A vehicle at Incoming cannot be booked.",
+      "page": 59,
+      "item_id": "9.2-C01",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Vehicle conditions",
+      "text": "A vehicle in pre-launch cannot be booked by a member.",
+      "page": 59,
+      "item_id": "9.2-C02",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Vehicle conditions",
+      "text": "A vehicle in pre-launch can be booked by staff.",
+      "page": 59,
+      "item_id": "9.2-C03",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Vehicle conditions",
+      "text": "A vehicle at condition Prep cannot be booked.",
+      "page": 59,
+      "item_id": "9.2-C04",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Vehicle conditions",
+      "text": "A vehicle with a withhold covering the dates cannot be booked.",
+      "page": 59,
+      "item_id": "9.2-C05",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Member checks",
+      "text": "A membership ending mid-trip refuses the booking.",
+      "page": 59,
+      "item_id": "9.2-C06",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Member checks",
+      "text": "Insurance expiring mid-trip refuses the booking.",
+      "page": 59,
+      "item_id": "9.2-C07",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Member checks",
+      "text": "The insurance message is returned before any points message.",
+      "page": 59,
+      "item_id": "9.2-C08",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Member checks",
+      "text": "A member with two packages is asked which.",
+      "page": 59,
+      "item_id": "9.2-C09",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Pricing",
+      "text": "A weekday trip charges the weekday rate per day.",
+      "page": 59,
+      "item_id": "9.2-C10",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Pricing",
+      "text": "A friday-to-Monday trip charges one weekend rate.",
+      "page": 59,
+      "item_id": "9.2-C11",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Pricing",
+      "text": "A thursday-to-Monday trip charges one weekday plus one weekend.",
+      "page": 59,
+      "item_id": "9.2-C12",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Pricing",
+      "text": "The estimate is stored broken into weekday and weekend parts.",
+      "page": 59,
+      "item_id": "9.2-C13",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Pricing",
+      "text": "The card is resolved from the package pointer, not the series.",
+      "page": 59,
+      "item_id": "9.2-C14",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Confirmation",
+      "text": "Confirming posts a charge to the points ledger.",
+      "page": 59,
+      "item_id": "9.2-C15",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Confirmation",
+      "text": "A courtesy booking consumes no allowance and still blocks the car.",
+      "page": 59,
+      "item_id": "9.2-C16",
+      "guide_id": "9.2"
+    },
+    {
+      "group": "Confirmation",
+      "text": "A booking against a Pending member is created tentative.",
+      "page": 59,
+      "item_id": "9.2-C17",
+      "guide_id": "9.2"
+    }
+  ],
+  "checklist_count": 17
+}
