@@ -1,0 +1,94 @@
+# Base44 dev environment for Freedom Supercars
+# Runs the API and web from cloned source with live-reload dev servers.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fs
+      POSTGRES_PASSWORD: fs_dev_password
+      POSTGRES_DB: freedom_supercars
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fs -d freedom_supercars"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: on-failure
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/dev-postgres-init.sql:/docker-entrypoint-initdb.d/01-create-fs-app.sql:ro
+
+  migrate:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    volumes:
+      - ./api:/app
+    environment:
+      - DATABASE_URL=postgres://fs:fs_dev_password@postgres:5432/freedom_supercars
+    command: sh -c "npm install --no-audit --no-fund && node scripts/migrate.js"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    volumes:
+      - ./api:/app
+    environment:
+      - DATABASE_URL=postgres://fs:fs_dev_password@postgres:5432/freedom_supercars
+    command: sh -c "node scripts/seed.js"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  api:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    volumes:
+      - ./api:/app
+    ports:
+      - "8000:8080"
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - DATABASE_URL=postgres://fs:fs_dev_password@postgres:5432/freedom_supercars
+      - JWT_SECRET=fs-dev-jwt-secret-not-for-production
+      - ALLOWED_ORIGINS=*
+    command: sh -c "npm install --no-audit --no-fund && node --watch src/index.js"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    restart: on-failure
+
+  web:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    volumes:
+      - ./web:/app
+    ports:
+      - "3000:5173"
+    environment:
+      - VITE_API_URL=https://8000-${BASE44_PUBLIC_HOST_SUFFIX}
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:5173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: on-failure
+
+volumes:
+  pgdata:

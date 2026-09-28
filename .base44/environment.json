@@ -1,0 +1,12 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "ANTHROPIC_API_KEY",
+      "description": "Anthropic API key for the MARC concierge chat feature. Optional — the app boots without it, but concierge chat will not work. Obtain from https://console.anthropic.com/settings/keys.",
+      "requiredAtBoot": false
+    }
+  ]
+}
