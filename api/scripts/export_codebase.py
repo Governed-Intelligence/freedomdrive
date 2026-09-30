@@ -7,7 +7,7 @@ doc_path = os.path.join(root_dir, "FREEDOM_SUPERCARS_FULL_CODEBASE.md")
 
 exclude_dirs = {"node_modules", ".git", ".terraform", ".next", "dist", "build", "scratch"}
 exclude_exts = {".zip", ".tar", ".gz", ".png", ".jpg", ".jpeg", ".pdf", ".vsix", ".ico", ".svg", ".lock"}
-exclude_files = {"package-lock.json", "terraform.tfstate", "terraform.tfstate.backup"}
+exclude_files = {"package-lock.json", "terraform.tfstate", "terraform.tfstate.backup", "terraform.tfvars", ".env", ".env.local"}
 
 files_to_process = []
 for dirpath, dirnames, filenames in os.walk(root_dir):

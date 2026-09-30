@@ -401,121 +401,128 @@ reservationsRouter.post('/:id/cancel', optionalAuth, async (req, res) => {
   res.json({ reservation: result.rows[0] });
 });
 
-// POST /v1/reservations/:id/pickup
-reservationsRouter.post('/:id/pickup', async (req, res) => {
+// POST /v1/reservations/:id/pickup - Connects pickup directly to trip creation (Guide 10.1 & fs.trips)
+reservationsRouter.post('/:id/pickup', optionalAuth, async (req, res) => {
   const { id } = req.params;
   const schema = z.object({
-    mileage: z.number().int().nonnegative(),
-    fuel_level_pct: z.number().int().min(0).max(100),
-    condition: z.enum(['excellent', 'good', 'fair', 'needs_attention', 'out_of_service']),
+    mileage: z.number().int().nonnegative().optional(),
+    starting_odometer: z.number().nonnegative().optional(),
+    startingOdometer: z.number().nonnegative().optional(),
+    fuel_level_pct: z.number().min(0).max(100).default(100).optional(),
+    fuel_start_percent: z.number().min(0).max(100).default(100).optional(),
+    fuelStartPercent: z.number().min(0).max(100).default(100).optional(),
+    condition: z.enum(['excellent', 'good', 'fair', 'needs_attention', 'out_of_service']).default('excellent').optional(),
+    member_signature_url: z.string().optional(),
+    condition_signature: z.string().optional(),
+    conditionSignature: z.string().optional(),
+    signature: z.string().optional(),
     pre_existing_damage: z.string().max(2000).optional(),
     handled_by_staff: z.string().uuid().optional(),
     photos_url: z.array(z.string().url()).optional(),
     notes: z.string().max(2000).optional(),
+    start_type: z.string().max(20).default('Pickup').optional(),
+    startType: z.string().max(20).default('Pickup').optional(),
+    start_time_actual: z.string().datetime({ offset: true }).optional(),
+    startTimeActual: z.string().datetime({ offset: true }).optional(),
   });
   const data = schema.parse(req.body);
+  const startingOdometer = data.starting_odometer ?? data.startingOdometer ?? data.mileage;
+  const fuelStartPercent = data.fuel_start_percent ?? data.fuelStartPercent ?? data.fuel_level_pct ?? 100;
+  const signatureUrl = data.condition_signature || data.conditionSignature || data.member_signature_url || data.signature || null;
+
+  if (startingOdometer == null) throw new HttpError(400, 'starting_odometer (or mileage) is required');
 
   const result = await withTransaction(async (client) => {
-    const res1 = await client.query(
-      `
-      UPDATE fs.reservations
-         SET status = 'picked_up', updated_at = now()
-       WHERE id = $1 AND status = 'confirmed'
-       RETURNING id, vehicle_id, confirmation_code
-      `,
-      [id]
-    );
-    if (res1.rowCount === 0) {
-      throw new HttpError(409, 'Reservation not in confirmed state');
-    }
-    const { vehicle_id } = res1.rows[0];
+    const trip = await checkoutTrip(client, {
+      reservationId: id,
+      startingOdometer,
+      fuelStartPercent,
+      startTimeActual: data.start_time_actual || data.startTimeActual,
+      startType: data.start_type || data.startType || 'Pickup',
+      condition: data.condition || 'excellent',
+      conditionSignature: signatureUrl,
+      preExistingDamage: data.pre_existing_damage,
+      photosUrl: data.photos_url,
+      notes: data.notes,
+      handledByStaff: data.handled_by_staff,
+      actorUserId: req.user?.userId || null,
+    });
 
-    await client.query(
-      `
-      INSERT INTO fs.reservation_pickups_returns
-        (reservation_id, event_type, mileage, fuel_level_pct, condition,
-         pre_existing_damage, handled_by_staff, photos_url, notes)
-      VALUES ($1, 'pickup', $2, $3, $4, $5, $6, $7, $8)
-      `,
-      [
-        id,
-        data.mileage,
-        data.fuel_level_pct,
-        data.condition,
-        data.pre_existing_damage ?? null,
-        data.handled_by_staff ?? null,
-        data.photos_url ?? null,
-        data.notes ?? null,
-      ]
-    );
-
-    await client.query(
-      `UPDATE fs.vehicles SET status = 'in_use', current_mileage = $1 WHERE id = $2`,
-      [data.mileage, vehicle_id]
-    );
-
-    return res1.rows[0];
+    const resQuery = await client.query('SELECT * FROM fs.reservations WHERE id = $1', [id]);
+    return {
+      reservation: resQuery.rows[0],
+      trip
+    };
   });
-  res.json({ reservation: result });
+
+  res.status(201).json(result);
 });
 
-// POST /v1/reservations/:id/return
-reservationsRouter.post('/:id/return', async (req, res) => {
+// POST /v1/reservations/:id/return - Connects return directly to trip settlement (Guide 10.2)
+reservationsRouter.post('/:id/return', optionalAuth, async (req, res) => {
   const { id } = req.params;
   const schema = z.object({
-    mileage: z.number().int().nonnegative(),
-    fuel_level_pct: z.number().int().min(0).max(100),
-    condition: z.enum(['excellent', 'good', 'fair', 'needs_attention', 'out_of_service']),
+    mileage: z.number().int().nonnegative().optional(),
+    closing_odometer: z.number().nonnegative().optional(),
+    closingOdometer: z.number().nonnegative().optional(),
+    fuel_level_pct: z.number().min(0).max(100).default(100).optional(),
+    fuel_end_percent: z.number().min(0).max(100).default(100).optional(),
+    fuelEndPercent: z.number().min(0).max(100).default(100).optional(),
+    condition: z.enum(['excellent', 'good', 'fair', 'needs_attention', 'out_of_service']).default('good').optional(),
+    member_signature_url: z.string().optional(),
+    condition_signature: z.string().optional(),
+    conditionSignature: z.string().optional(),
+    signature: z.string().optional(),
     new_damage: z.string().max(2000).optional(),
     handled_by_staff: z.string().uuid().optional(),
     photos_url: z.array(z.string().url()).optional(),
     notes: z.string().max(2000).optional(),
+    end_type: z.string().max(20).default('Dropoff').optional(),
+    endType: z.string().max(20).default('Dropoff').optional(),
+    end_time_actual: z.string().datetime({ offset: true }).optional(),
+    endTimeActual: z.string().datetime({ offset: true }).optional(),
   });
   const data = schema.parse(req.body);
+  const closingOdometer = data.closing_odometer ?? data.closingOdometer ?? data.mileage;
+  const fuelEndPercent = data.fuel_end_percent ?? data.fuelEndPercent ?? data.fuel_level_pct ?? 100;
+  const signatureUrl = data.condition_signature || data.conditionSignature || data.member_signature_url || data.signature || null;
+
+  if (closingOdometer == null) throw new HttpError(400, 'closing_odometer (or mileage) is required');
 
   const result = await withTransaction(async (client) => {
-    const res1 = await client.query(
-      `
-      UPDATE fs.reservations
-         SET status = 'returned', updated_at = now()
-       WHERE id = $1 AND status = 'picked_up'
-       RETURNING id, vehicle_id, confirmation_code
-      `,
+    // Find active open trip for this reservation
+    const tripLookup = await client.query(
+      `SELECT vehicle_trip_id FROM fs.vehicle_trip WHERE vehicle_reservation_id = $1 AND end_time_actual IS NULL`,
       [id]
     );
-    if (res1.rowCount === 0) {
-      throw new HttpError(409, 'Reservation not in picked_up state');
+    if (tripLookup.rowCount === 0) {
+      throw new HttpError(404, `No active open trip found for reservation ${id}`);
     }
-    const { vehicle_id } = res1.rows[0];
+    const tripId = tripLookup.rows[0].vehicle_trip_id;
 
-    await client.query(
-      `
-      INSERT INTO fs.reservation_pickups_returns
-        (reservation_id, event_type, mileage, fuel_level_pct, condition,
-         new_damage, handled_by_staff, photos_url, notes)
-      VALUES ($1, 'return', $2, $3, $4, $5, $6, $7, $8)
-      `,
-      [
-        id,
-        data.mileage,
-        data.fuel_level_pct,
-        data.condition,
-        data.new_damage ?? null,
-        data.handled_by_staff ?? null,
-        data.photos_url ?? null,
-        data.notes ?? null,
-      ]
-    );
+    const trip = await checkinTrip(client, {
+      tripId,
+      closingOdometer,
+      fuelEndPercent,
+      endTimeActual: data.end_time_actual || data.endTimeActual,
+      endType: data.end_type || data.endType || 'Dropoff',
+      condition: data.condition || 'good',
+      conditionSignature: signatureUrl,
+      newDamage: data.new_damage,
+      photosUrl: data.photos_url,
+      notes: data.notes,
+      handledByStaff: data.handled_by_staff,
+      actorUserId: req.user?.userId || null,
+    });
 
-    // Moves vehicle to detailing with turnaround buffer
-    await client.query(
-      `UPDATE fs.vehicles SET status = 'detailing', current_mileage = $1 WHERE id = $2`,
-      [data.mileage, vehicle_id]
-    );
-
-    return res1.rows[0];
+    const resQuery = await client.query('SELECT * FROM fs.reservations WHERE id = $1', [id]);
+    return {
+      reservation: resQuery.rows[0],
+      trip
+    };
   });
-  res.json({ reservation: result });
+
+  res.json(result);
 });
 
 // POST /v1/reservations/:id/checkout - Trip checkout with odometer capture & rate freeze (Guide 10.1)
@@ -524,24 +531,42 @@ reservationsRouter.post('/:id/checkout', optionalAuth, async (req, res) => {
   const schema = z.object({
     starting_odometer: z.number().nonnegative().optional(),
     startingOdometer: z.number().nonnegative().optional(),
+    mileage: z.number().nonnegative().optional(),
     fuel_start_percent: z.number().min(0).max(100).default(100).optional(),
     fuelStartPercent: z.number().min(0).max(100).default(100).optional(),
+    fuel_level_pct: z.number().min(0).max(100).default(100).optional(),
+    condition: z.enum(['excellent', 'good', 'fair', 'needs_attention', 'out_of_service']).default('excellent').optional(),
+    member_signature_url: z.string().optional(),
+    condition_signature: z.string().optional(),
+    conditionSignature: z.string().optional(),
+    signature: z.string().optional(),
     start_time_actual: z.string().datetime({ offset: true }).optional(),
     startTimeActual: z.string().datetime({ offset: true }).optional(),
     start_type: z.string().max(20).default('Pickup').optional(),
     startType: z.string().max(20).default('Pickup').optional(),
+    notes: z.string().max(2000).optional(),
+    pre_existing_damage: z.string().max(2000).optional(),
+    handled_by_staff: z.string().uuid().optional(),
   });
   const data = schema.parse(req.body);
-  const startingOdometer = data.starting_odometer ?? data.startingOdometer;
+  const startingOdometer = data.starting_odometer ?? data.startingOdometer ?? data.mileage;
+  const fuelStartPercent = data.fuel_start_percent ?? data.fuelStartPercent ?? data.fuel_level_pct ?? 100;
+  const signatureUrl = data.condition_signature || data.conditionSignature || data.member_signature_url || data.signature || null;
+
   if (startingOdometer == null) throw new HttpError(400, 'starting_odometer is required');
 
   const result = await withTransaction(async (client) => {
     return await checkoutTrip(client, {
       reservationId: id,
       startingOdometer,
-      fuelStartPercent: data.fuel_start_percent ?? data.fuelStartPercent ?? 100,
+      fuelStartPercent,
       startTimeActual: data.start_time_actual || data.startTimeActual,
       startType: data.start_type || data.startType || 'Pickup',
+      condition: data.condition || 'excellent',
+      conditionSignature: signatureUrl,
+      preExistingDamage: data.pre_existing_damage,
+      notes: data.notes,
+      handledByStaff: data.handled_by_staff,
       actorUserId: req.user?.userId || null,
     });
   });
@@ -555,16 +580,28 @@ reservationsRouter.post('/:id/checkin', optionalAuth, async (req, res) => {
   const schema = z.object({
     closing_odometer: z.number().nonnegative().optional(),
     closingOdometer: z.number().nonnegative().optional(),
+    mileage: z.number().nonnegative().optional(),
     fuel_end_percent: z.number().min(0).max(100).default(100).optional(),
     fuelEndPercent: z.number().min(0).max(100).default(100).optional(),
+    fuel_level_pct: z.number().min(0).max(100).default(100).optional(),
+    condition: z.enum(['excellent', 'good', 'fair', 'needs_attention', 'out_of_service']).default('good').optional(),
+    member_signature_url: z.string().optional(),
+    condition_signature: z.string().optional(),
+    conditionSignature: z.string().optional(),
+    signature: z.string().optional(),
     end_time_actual: z.string().datetime({ offset: true }).optional(),
     endTimeActual: z.string().datetime({ offset: true }).optional(),
     end_type: z.string().max(20).default('Dropoff').optional(),
     endType: z.string().max(20).default('Dropoff').optional(),
-    notes: z.string().max(1000).optional(),
+    notes: z.string().max(2000).optional(),
+    new_damage: z.string().max(2000).optional(),
+    handled_by_staff: z.string().uuid().optional(),
   });
   const data = schema.parse(req.body);
-  const closingOdometer = data.closing_odometer ?? data.closingOdometer;
+  const closingOdometer = data.closing_odometer ?? data.closingOdometer ?? data.mileage;
+  const fuelEndPercent = data.fuel_end_percent ?? data.fuelEndPercent ?? data.fuel_level_pct ?? 100;
+  const signatureUrl = data.condition_signature || data.conditionSignature || data.member_signature_url || data.signature || null;
+
   if (closingOdometer == null) throw new HttpError(400, 'closing_odometer is required');
 
   const result = await withTransaction(async (client) => {
@@ -581,10 +618,14 @@ reservationsRouter.post('/:id/checkin', optionalAuth, async (req, res) => {
     return await checkinTrip(client, {
       tripId,
       closingOdometer,
-      fuelEndPercent: data.fuel_end_percent ?? data.fuelEndPercent ?? 100,
+      fuelEndPercent,
       endTimeActual: data.end_time_actual || data.endTimeActual,
       endType: data.end_type || data.endType || 'Dropoff',
+      condition: data.condition || 'good',
+      conditionSignature: signatureUrl,
+      newDamage: data.new_damage,
       notes: data.notes,
+      handledByStaff: data.handled_by_staff,
       actorUserId: req.user?.userId || null,
     });
   });
