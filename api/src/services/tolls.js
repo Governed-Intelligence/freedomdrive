@@ -42,13 +42,15 @@ export async function importTolls(client, {
     if (!transactionAt) throw new HttpError(400, 'transaction_at is required for every toll');
     if (isNaN(amount) || amount <= 0) throw new HttpError(400, `Valid positive amount required for toll on tag ${tollTag}`);
 
-    // Resolve vehicle_id from toll_tag or license_plate
+    // Resolve vehicle_id from toll_tag, license_plate, or stock_number
     let vehicleId = null;
     const vehQuery = await client.query(
       `SELECT vehicle_id FROM (
          SELECT vehicle_id FROM fs.vehicle_registration_warranty WHERE LOWER(toll_tag) = LOWER($1) OR LOWER(license_plate) = LOWER($1)
          UNION
-         SELECT id as vehicle_id FROM fs.vehicles WHERE LOWER(license_plate) = LOWER($1)
+         SELECT id as vehicle_id FROM fs.vehicles WHERE LOWER(license_plate) = LOWER($1) OR LOWER(stock_number) = LOWER($1)
+         UNION
+         SELECT vehicle_id FROM fs.vehicle WHERE LOWER(license_plate) = LOWER($1) OR LOWER(stock_number) = LOWER($1)
        ) sub LIMIT 1`,
       [tollTag]
     );
