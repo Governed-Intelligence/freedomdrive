@@ -265,10 +265,10 @@ export async function billTripTolls(client, {
        (SELECT vehicle_reservation_id FROM fs.vehicle_reservation WHERE vehicle_reservation_id = $3),
        (SELECT vehicle_id FROM fs.vehicle WHERE vehicle_id = $4),
        'TOLL',
-       'DEBIT'::fs.member_charge_charge_style_enum,
+       'Dollars'::fs.member_charge_charge_style_enum,
        $5,
        $6,
-       'PENDING'::fs.member_charge_payment_status_enum,
+       'Pending'::fs.member_charge_payment_status_enum,
        $7
      ) RETURNING member_charge_id, charge_amount, description, payment_status, created_at`,
     [
