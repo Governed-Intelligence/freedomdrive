@@ -9,6 +9,7 @@
  * - Fuel replenishment fee calculation with plan markup and automated member charges
  */
 
+import { query } from '../db.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
 /**
@@ -368,7 +369,7 @@ export async function checkinTrip(client, {
 
   let tankCapacity = 18.0; // standard supercar fuel tank size in gallons
   try {
-    const descRes = await client.query(
+    const descRes = await query(
       `SELECT fuel_tank_size FROM fs.vehicle_description WHERE vehicle_id = $1 LIMIT 1`,
       [trip.vehicle_id]
     );
@@ -383,11 +384,11 @@ export async function checkinTrip(client, {
 
   let fuelMarkupPercent = 10.0; // default 10.00% markup
   try {
-    const markupRes = await client.query(
+    const markupRes = await query(
       `SELECT mlp.fuel_markup_percent
-         FROM fs.members m
+         FROM fs.member m
          JOIN fs.membership_level_pricing mlp ON mlp.membership_level_id = m.membership_level_id
-        WHERE m.id = $1 AND mlp.fuel_markup_percent IS NOT NULL
+        WHERE m.member_id = $1 AND mlp.fuel_markup_percent IS NOT NULL
         ORDER BY mlp.effective_from DESC NULLS LAST
         LIMIT 1`,
       [trip.member_id]

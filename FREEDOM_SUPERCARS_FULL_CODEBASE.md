@@ -75,7 +75,7 @@ Total Source Files: 186
 - [api\src\services\marc.js](#api-src-services-marc-js) (16,423 bytes)
 - [api\src\services\rateResolver.js](#api-src-services-rateresolver-js) (12,720 bytes)
 - [api\src\services\reservations.js](#api-src-services-reservations-js) (12,366 bytes)
-- [api\src\services\trips.js](#api-src-services-trips-js) (25,593 bytes)
+- [api\src\services\trips.js](#api-src-services-trips-js) (25,619 bytes)
 - [base44\README.md](#base44-readme-md) (5,492 bytes)
 - [base44\entities\Member.jsonc](#base44-entities-member-jsonc) (3,973 bytes)
 - [base44\entities\MemberBranchHistory.jsonc](#base44-entities-memberbranchhistory-jsonc) (1,449 bytes)
@@ -139,7 +139,7 @@ Total Source Files: 186
 - [freedom_supercars_complete_codebase\api\src\routes\vop.js](#freedom_supercars_complete_codebase-api-src-routes-vop-js) (38,856 bytes)
 - [freedom_supercars_complete_codebase\api\src\services\marc.js](#freedom_supercars_complete_codebase-api-src-services-marc-js) (16,019 bytes)
 - [freedom_supercars_complete_codebase\api\src\services\reservations.js](#freedom_supercars_complete_codebase-api-src-services-reservations-js) (5,801 bytes)
-- [freedom_supercars_complete_codebase\api\src\services\trips.js](#freedom_supercars_complete_codebase-api-src-services-trips-js) (25,593 bytes)
+- [freedom_supercars_complete_codebase\api\src\services\trips.js](#freedom_supercars_complete_codebase-api-src-services-trips-js) (25,619 bytes)
 - [freedom_supercars_complete_codebase\base44\README.md](#freedom_supercars_complete_codebase-base44-readme-md) (5,365 bytes)
 - [freedom_supercars_complete_codebase\base44\functions\fs-gateway\entry.ts](#freedom_supercars_complete_codebase-base44-functions-fs-gateway-entry-ts) (32,198 bytes)
 - [freedom_supercars_complete_codebase\base44\rls\lockdown.json](#freedom_supercars_complete_codebase-base44-rls-lockdown-json) (4,000 bytes)
@@ -24292,7 +24292,7 @@ export async function checkAnnualTierCap(ctx, days) {
 
 ## api\src\services\trips.js
 
-**File Path**: `api\src\services\trips.js` | **Size**: 25,593 bytes
+**File Path**: `api\src\services\trips.js` | **Size**: 25,619 bytes
 
 ```javascript
 /**
@@ -24306,6 +24306,7 @@ export async function checkAnnualTierCap(ctx, days) {
  * - Fuel replenishment fee calculation with plan markup and automated member charges
  */
 
+import { query } from '../db.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
 /**
@@ -24665,7 +24666,7 @@ export async function checkinTrip(client, {
 
   let tankCapacity = 18.0; // standard supercar fuel tank size in gallons
   try {
-    const descRes = await client.query(
+    const descRes = await query(
       `SELECT fuel_tank_size FROM fs.vehicle_description WHERE vehicle_id = $1 LIMIT 1`,
       [trip.vehicle_id]
     );
@@ -24680,11 +24681,11 @@ export async function checkinTrip(client, {
 
   let fuelMarkupPercent = 10.0; // default 10.00% markup
   try {
-    const markupRes = await client.query(
+    const markupRes = await query(
       `SELECT mlp.fuel_markup_percent
-         FROM fs.members m
+         FROM fs.member m
          JOIN fs.membership_level_pricing mlp ON mlp.membership_level_id = m.membership_level_id
-        WHERE m.id = $1 AND mlp.fuel_markup_percent IS NOT NULL
+        WHERE m.member_id = $1 AND mlp.fuel_markup_percent IS NOT NULL
         ORDER BY mlp.effective_from DESC NULLS LAST
         LIMIT 1`,
       [trip.member_id]
@@ -48101,7 +48102,7 @@ export async function checkAnnualTierCap(ctx, days) {
 
 ## freedom_supercars_complete_codebase\api\src\services\trips.js
 
-**File Path**: `freedom_supercars_complete_codebase\api\src\services\trips.js` | **Size**: 25,593 bytes
+**File Path**: `freedom_supercars_complete_codebase\api\src\services\trips.js` | **Size**: 25,619 bytes
 
 ```javascript
 /**
@@ -48115,6 +48116,7 @@ export async function checkAnnualTierCap(ctx, days) {
  * - Fuel replenishment fee calculation with plan markup and automated member charges
  */
 
+import { query } from '../db.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
 /**
@@ -48474,7 +48476,7 @@ export async function checkinTrip(client, {
 
   let tankCapacity = 18.0; // standard supercar fuel tank size in gallons
   try {
-    const descRes = await client.query(
+    const descRes = await query(
       `SELECT fuel_tank_size FROM fs.vehicle_description WHERE vehicle_id = $1 LIMIT 1`,
       [trip.vehicle_id]
     );
@@ -48489,11 +48491,11 @@ export async function checkinTrip(client, {
 
   let fuelMarkupPercent = 10.0; // default 10.00% markup
   try {
-    const markupRes = await client.query(
+    const markupRes = await query(
       `SELECT mlp.fuel_markup_percent
-         FROM fs.members m
+         FROM fs.member m
          JOIN fs.membership_level_pricing mlp ON mlp.membership_level_id = m.membership_level_id
-        WHERE m.id = $1 AND mlp.fuel_markup_percent IS NOT NULL
+        WHERE m.member_id = $1 AND mlp.fuel_markup_percent IS NOT NULL
         ORDER BY mlp.effective_from DESC NULLS LAST
         LIMIT 1`,
       [trip.member_id]
