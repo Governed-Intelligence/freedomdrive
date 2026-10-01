@@ -1506,7 +1506,7 @@ export async function listServiceTrips(client, {
   const res = await client.query(
     `SELECT t.*,
             ts.vendor_id,
-            vdr.name AS vendor_name,
+            vdr.vendor_name AS vendor_name,
             ts.service_category_code,
             ts.service_type_code,
             ts.service_reason_code,

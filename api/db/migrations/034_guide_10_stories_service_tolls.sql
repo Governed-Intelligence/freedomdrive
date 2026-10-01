@@ -163,7 +163,7 @@ SELECT
   tm.calculation_detail,
   -- Service trip companion details (Guide 10.4)
   ts.vendor_id                              AS service_vendor_id,
-  vdr.name                                  AS service_vendor_name,
+  vdr.vendor_name                           AS service_vendor_name,
   ts.service_category_code,
   ts.service_type_code,
   ts.service_reason_code,
