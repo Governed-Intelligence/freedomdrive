@@ -1,7 +1,7 @@
 # Freedom Supercars GCP & Base44 - Complete Production Codebase Export
 
 Generated on: 2026-09-28
-Total Source Files: 186
+Total Source Files: 192
 
 ## Table of Contents
 
@@ -47,6 +47,7 @@ Total Source Files: 186
 - [api\db\migrations\031_fix_debit_points_on_confirm_courtesy.sql](#api-db-migrations-031_fix_debit_points_on_confirm_courtesy-sql) (3,061 bytes)
 - [api\db\migrations\032_guide_10_1_10_2_trip_creation_and_settlement.sql](#api-db-migrations-032_guide_10_1_10_2_trip_creation_and_settlement-sql) (5,136 bytes)
 - [api\db\migrations\033_guide_10_trips_view_and_settlement_fuel.sql](#api-db-migrations-033_guide_10_trips_view_and_settlement_fuel-sql) (3,769 bytes)
+- [api\db\migrations\034_guide_10_stories_service_tolls.sql](#api-db-migrations-034_guide_10_stories_service_tolls-sql) (10,841 bytes)
 - [api\scripts\compile_stage2_schema.py](#api-scripts-compile_stage2_schema-py) (17,684 bytes)
 - [api\scripts\export_codebase.py](#api-scripts-export_codebase-py) (3,461 bytes)
 - [api\scripts\migrate.js](#api-scripts-migrate-js) (4,768 bytes)
@@ -54,7 +55,7 @@ Total Source Files: 186
 - [api\scripts\test_live_mpc_vop.py](#api-scripts-test_live_mpc_vop-py) (5,244 bytes)
 - [api\src\config.js](#api-src-config-js) (1,178 bytes)
 - [api\src\db.js](#api-src-db-js) (1,913 bytes)
-- [api\src\index.js](#api-src-index-js) (4,082 bytes)
+- [api\src\index.js](#api-src-index-js) (4,188 bytes)
 - [api\src\logger.js](#api-src-logger-js) (727 bytes)
 - [api\src\middleware\auth.js](#api-src-middleware-auth-js) (1,222 bytes)
 - [api\src\middleware\errorHandler.js](#api-src-middleware-errorhandler-js) (1,771 bytes)
@@ -70,12 +71,14 @@ Total Source Files: 186
 - [api\src\routes\reservations.js](#api-src-routes-reservations-js) (26,932 bytes)
 - [api\src\routes\subscriptions.js](#api-src-routes-subscriptions-js) (6,676 bytes)
 - [api\src\routes\tiers.js](#api-src-routes-tiers-js) (487 bytes)
-- [api\src\routes\trips.js](#api-src-routes-trips-js) (10,752 bytes)
+- [api\src\routes\tolls.js](#api-src-routes-tolls-js) (3,939 bytes)
+- [api\src\routes\trips.js](#api-src-routes-trips-js) (24,872 bytes)
 - [api\src\routes\vop.js](#api-src-routes-vop-js) (40,032 bytes)
 - [api\src\services\marc.js](#api-src-services-marc-js) (16,423 bytes)
 - [api\src\services\rateResolver.js](#api-src-services-rateresolver-js) (12,720 bytes)
 - [api\src\services\reservations.js](#api-src-services-reservations-js) (12,366 bytes)
-- [api\src\services\trips.js](#api-src-services-trips-js) (25,619 bytes)
+- [api\src\services\tolls.js](#api-src-services-tolls-js) (12,887 bytes)
+- [api\src\services\trips.js](#api-src-services-trips-js) (50,554 bytes)
 - [base44\README.md](#base44-readme-md) (5,492 bytes)
 - [base44\entities\Member.jsonc](#base44-entities-member-jsonc) (3,973 bytes)
 - [base44\entities\MemberBranchHistory.jsonc](#base44-entities-memberbranchhistory-jsonc) (1,449 bytes)
@@ -113,6 +116,7 @@ Total Source Files: 186
 - [freedom_supercars_complete_codebase\api\db\migrations\019_stage2_vehicle_financing.sql](#freedom_supercars_complete_codebase-api-db-migrations-019_stage2_vehicle_financing-sql) (1,895 bytes)
 - [freedom_supercars_complete_codebase\api\db\migrations\020_hydrate_authoritative_production_data.sql](#freedom_supercars_complete_codebase-api-db-migrations-020_hydrate_authoritative_production_data-sql) (24,592 bytes)
 - [freedom_supercars_complete_codebase\api\db\migrations\033_guide_10_trips_view_and_settlement_fuel.sql](#freedom_supercars_complete_codebase-api-db-migrations-033_guide_10_trips_view_and_settlement_fuel-sql) (3,769 bytes)
+- [freedom_supercars_complete_codebase\api\db\migrations\034_guide_10_stories_service_tolls.sql](#freedom_supercars_complete_codebase-api-db-migrations-034_guide_10_stories_service_tolls-sql) (10,841 bytes)
 - [freedom_supercars_complete_codebase\api\scripts\compile_stage2_schema.py](#freedom_supercars_complete_codebase-api-scripts-compile_stage2_schema-py) (17,295 bytes)
 - [freedom_supercars_complete_codebase\api\scripts\export_codebase.py](#freedom_supercars_complete_codebase-api-scripts-export_codebase-py) (3,461 bytes)
 - [freedom_supercars_complete_codebase\api\scripts\migrate.js](#freedom_supercars_complete_codebase-api-scripts-migrate-js) (3,875 bytes)
@@ -120,7 +124,7 @@ Total Source Files: 186
 - [freedom_supercars_complete_codebase\api\scripts\test_live_mpc_vop.py](#freedom_supercars_complete_codebase-api-scripts-test_live_mpc_vop-py) (5,105 bytes)
 - [freedom_supercars_complete_codebase\api\src\config.js](#freedom_supercars_complete_codebase-api-src-config-js) (1,143 bytes)
 - [freedom_supercars_complete_codebase\api\src\db.js](#freedom_supercars_complete_codebase-api-src-db-js) (1,842 bytes)
-- [freedom_supercars_complete_codebase\api\src\index.js](#freedom_supercars_complete_codebase-api-src-index-js) (3,722 bytes)
+- [freedom_supercars_complete_codebase\api\src\index.js](#freedom_supercars_complete_codebase-api-src-index-js) (4,188 bytes)
 - [freedom_supercars_complete_codebase\api\src\logger.js](#freedom_supercars_complete_codebase-api-src-logger-js) (699 bytes)
 - [freedom_supercars_complete_codebase\api\src\middleware\auth.js](#freedom_supercars_complete_codebase-api-src-middleware-auth-js) (1,176 bytes)
 - [freedom_supercars_complete_codebase\api\src\middleware\errorHandler.js](#freedom_supercars_complete_codebase-api-src-middleware-errorhandler-js) (1,711 bytes)
@@ -135,11 +139,13 @@ Total Source Files: 186
 - [freedom_supercars_complete_codebase\api\src\routes\reservations.js](#freedom_supercars_complete_codebase-api-src-routes-reservations-js) (26,932 bytes)
 - [freedom_supercars_complete_codebase\api\src\routes\subscriptions.js](#freedom_supercars_complete_codebase-api-src-routes-subscriptions-js) (5,369 bytes)
 - [freedom_supercars_complete_codebase\api\src\routes\tiers.js](#freedom_supercars_complete_codebase-api-src-routes-tiers-js) (472 bytes)
-- [freedom_supercars_complete_codebase\api\src\routes\trips.js](#freedom_supercars_complete_codebase-api-src-routes-trips-js) (10,752 bytes)
+- [freedom_supercars_complete_codebase\api\src\routes\tolls.js](#freedom_supercars_complete_codebase-api-src-routes-tolls-js) (3,939 bytes)
+- [freedom_supercars_complete_codebase\api\src\routes\trips.js](#freedom_supercars_complete_codebase-api-src-routes-trips-js) (24,872 bytes)
 - [freedom_supercars_complete_codebase\api\src\routes\vop.js](#freedom_supercars_complete_codebase-api-src-routes-vop-js) (38,856 bytes)
 - [freedom_supercars_complete_codebase\api\src\services\marc.js](#freedom_supercars_complete_codebase-api-src-services-marc-js) (16,019 bytes)
 - [freedom_supercars_complete_codebase\api\src\services\reservations.js](#freedom_supercars_complete_codebase-api-src-services-reservations-js) (5,801 bytes)
-- [freedom_supercars_complete_codebase\api\src\services\trips.js](#freedom_supercars_complete_codebase-api-src-services-trips-js) (25,619 bytes)
+- [freedom_supercars_complete_codebase\api\src\services\tolls.js](#freedom_supercars_complete_codebase-api-src-services-tolls-js) (12,887 bytes)
+- [freedom_supercars_complete_codebase\api\src\services\trips.js](#freedom_supercars_complete_codebase-api-src-services-trips-js) (50,554 bytes)
 - [freedom_supercars_complete_codebase\base44\README.md](#freedom_supercars_complete_codebase-base44-readme-md) (5,365 bytes)
 - [freedom_supercars_complete_codebase\base44\functions\fs-gateway\entry.ts](#freedom_supercars_complete_codebase-base44-functions-fs-gateway-entry-ts) (32,198 bytes)
 - [freedom_supercars_complete_codebase\base44\rls\lockdown.json](#freedom_supercars_complete_codebase-base44-rls-lockdown-json) (4,000 bytes)
@@ -12362,6 +12368,224 @@ COMMIT;
 
 ---
 
+## api\db\migrations\034_guide_10_stories_service_tolls.sql
+
+**File Path**: `api\db\migrations\034_guide_10_stories_service_tolls.sql` | **Size**: 10,841 bytes
+
+```sql
+-- =============================================================================
+-- Migration 034: Guide 10.3 (Trip Stories), Guide 10.4 (Service Trips),
+-- and Guide 10.5 (Toll Transactions)
+-- =============================================================================
+
+BEGIN;
+
+SET search_path TO fs, public;
+
+-- -----------------------------------------------------------------------------
+-- 1. Member Charge Types (Guide 10.4 & 10.5)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.member_charge_type (charge_type_code, charge_type_name, charge_description, sort_order, is_active)
+VALUES
+  ('TOLL',     'Toll Charges',         'Highway, expressway and bridge tolls incurred during trip', 6, TRUE),
+  ('SERVICE',  'Service & Maintenance', 'Vehicle service, maintenance, or repair recharge',         7, TRUE)
+ON CONFLICT (charge_type_code) DO UPDATE
+SET charge_type_name = EXCLUDED.charge_type_name,
+    charge_description = EXCLUDED.charge_description,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 2. Toll Authorities (Guide 10.5)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.toll_authority_select (authority_code, authority_name, sort_order, is_active)
+VALUES
+  ('HCTRA',   'Harris County Toll Road Authority (EZ TAG)',         1,  TRUE),
+  ('NTTA',    'North Texas Tollway Authority (TollTag)',            2,  TRUE),
+  ('TxTag',   'Texas Department of Transportation (TxTag)',         3,  TRUE),
+  ('SunPass', 'Florida Department of Transportation (SunPass)',     4,  TRUE),
+  ('E-ZPass', 'E-ZPass Interagency Group',                         5,  TRUE),
+  ('K-Tag',   'Kansas Turnpike Authority (K-TAG)',                  6,  TRUE),
+  ('Pikepass','Oklahoma Turnpike Authority (Pikepass)',             7,  TRUE),
+  ('FasTrak', 'California FasTrak',                                 8,  TRUE),
+  ('OTHER',   'Other Toll Authority / Out-of-Network',              99, TRUE)
+ON CONFLICT (authority_code) DO UPDATE
+SET authority_name = EXCLUDED.authority_name,
+    sort_order = EXCLUDED.sort_order,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 3. Service Categories, Types & Reasons (Guide 10.4)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.service_category (service_category_code, service_category_name, description, is_active, sort_order)
+VALUES
+  ('maintenance', 'Routine Maintenance',          'Regular scheduled preventive servicing',    TRUE, 1),
+  ('repair',      'Mechanical / Body Repair',     'Mechanical, structural, or body repair',     TRUE, 2),
+  ('inspection',  'Safety & Compliance Check',    'State, pre-track, or safety inspections',   TRUE, 3),
+  ('detailing',   'Detailing & Preservation',     'Paint correction, PPF, ceramic detailing',  TRUE, 4),
+  ('recall',      'Manufacturer Recall',          'OEM safety bulletin or recall campaign',    TRUE, 5)
+ON CONFLICT (service_category_code) DO UPDATE
+SET service_category_name = EXCLUDED.service_category_name,
+    description = EXCLUDED.description,
+    is_active = TRUE;
+
+INSERT INTO fs.vehicle_service_type (service_type_code, service_category_code, service_type_name, description, is_active, sort_order)
+VALUES
+  ('scheduled',   'maintenance', 'Scheduled Maintenance',   'Factory maintenance interval check',   TRUE, 1),
+  ('unscheduled', 'repair',      'Unscheduled Repair',      'Unplanned fix or component repair',     TRUE, 2),
+  ('warranty',    'repair',      'Warranty Claim Service',  'Work covered under OEM/3rd party warranty', TRUE, 3),
+  ('recall',      'recall',      'Safety Recall Service',   'Official manufacturer campaign work',   TRUE, 4),
+  ('inspection',  'inspection',  'Periodic Inspection',     'State safety, emissions, or track tech',TRUE, 5),
+  ('cosmetic',    'detailing',   'Cosmetic Detailing',      'Interior/exterior deep restorative prep', TRUE, 6)
+ON CONFLICT (service_type_code) DO UPDATE
+SET service_type_name = EXCLUDED.service_type_name,
+    service_category_code = EXCLUDED.service_category_code,
+    description = EXCLUDED.description,
+    is_active = TRUE;
+
+INSERT INTO fs.service_reason_select (service_reason_code, name, description, sort_order, is_active)
+VALUES
+  ('oil_change',       'Engine Oil & Filter Service',          'Annual or mileage lubricant change',          1, TRUE),
+  ('brake_service',    'Brake Pads & Rotors Replacement',      'Brake pad or carbon ceramic maintenance',    2, TRUE),
+  ('tire_replacement', 'Tire Mount & High-Speed Balancing',    'Tire replacement due to wear or track use',   3, TRUE),
+  ('damage_repair',    'Curb / Body Damage Remediation',       'Repairs from incident or cosmetic road rash', 4, TRUE),
+  ('electrical',       'Sensor / ECU Diagnostic',              'Electronic sensor and fault remediation',     5, TRUE),
+  ('annual_service',   'Factory Annual Service',               'Comprehensive OEM factory scheduled service', 6, TRUE),
+  ('other',            'Other Specialized Shop Work',          'Miscellaneous authorized service work',       7, TRUE)
+ON CONFLICT (service_reason_code) DO UPDATE
+SET name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 4. Trip Story Prompts (Guide 10.3)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.member_trip_story_prompt (prompt_code, prompt_text, help_text, sort_order, is_active)
+VALUES
+  ('HIGHLIGHT', 'What was the highlight or defining moment of this drive?', 
+   'Describe the standout moment behind the wheel or during your trip.', 1, TRUE),
+  ('HANDLING',  'How did the vehicle perform and handle on your route?', 
+   'Your impressions of steering response, acceleration, exhaust note, and road manners.', 2, TRUE),
+  ('ROUTE',     'What favorite routes, roads, or destinations did you explore?', 
+   'Scenic byways, hill country loops, coastal roads, or great dining/scenic stops.', 3, TRUE),
+  ('TIPS',      'Any advice, drive modes, or tips for the next member driving this supercar?', 
+   'Cabin features, luggage tips, preferred drive modes, or recommended road settings.', 4, TRUE)
+ON CONFLICT (prompt_code) DO UPDATE
+SET prompt_text = EXCLUDED.prompt_text,
+    help_text = EXCLUDED.help_text,
+    sort_order = EXCLUDED.sort_order,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 5. Trip Story Schema Adjustments (Guide 10.3)
+-- -----------------------------------------------------------------------------
+-- Add direct cover_photo_url on fs.member_trip_story
+ALTER TABLE fs.member_trip_story ADD COLUMN IF NOT EXISTS cover_photo_url TEXT;
+
+-- Enforce unique constraint for autosave upserts on answers: (member_trip_story_id, member_trip_story_prompt_id)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_member_trip_story_answer_story_prompt 
+  ON fs.member_trip_story_answer (member_trip_story_id, member_trip_story_prompt_id);
+
+-- -----------------------------------------------------------------------------
+-- 6. Toll Deduplication Index (Guide 10.5 Developer Note 2)
+-- -----------------------------------------------------------------------------
+CREATE UNIQUE INDEX IF NOT EXISTS uq_vehicle_toll_transaction_authority_tag_time 
+  ON fs.vehicle_toll_transaction (toll_authority_code, toll_tag, transaction_at);
+
+-- -----------------------------------------------------------------------------
+-- 7. Update canonical fs.trips VIEW with Service Trip Details
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW fs.trips AS
+SELECT
+  t.vehicle_trip_id,
+  t.vehicle_trip_id                         AS id,
+  t.vehicle_reservation_id,
+  t.vehicle_reservation_id                  AS reservation_id,
+  t.vehicle_id,
+  t.trip_type_code,
+  t.start_time_actual,
+  t.end_time_actual,
+  t.odometer_start_id,
+  t.odometer_end_id,
+  t.miles_driven,
+  t.fuel_start_percent,
+  t.fuel_end_percent,
+  t.extra_miles,
+  t.extra_miles_reason,
+  t.pay_vop_use,
+  t.condition_signature_url,
+  t.condition_return_signature_url,
+  t.condition_snapshot,
+  t.condition_return_snapshot,
+  -- Member trip details
+  tm.member_id,
+  tm.member_package_id,
+  tm.branch_id,
+  tm.start_type,
+  tm.return_type,
+  tm.miles_member,
+  tm.miles_member_adjustment,
+  tm.miles_member_adjustment_reason,
+  tm.vehicle_tier_snapshot,
+  tm.weekday_point_value_snapshot,
+  tm.weekend_point_value_snapshot,
+  tm.extra_mile_point_value_snapshot,
+  tm.included_miles_snapshot,
+  tm.overage_miles_snapshot,
+  tm.base_points,
+  tm.extra_mileage_points,
+  tm.total_points,
+  tm.calculation_version,
+  tm.calculation_detail,
+  -- Service trip companion details (Guide 10.4)
+  ts.vendor_id                              AS service_vendor_id,
+  vdr.name                                  AS service_vendor_name,
+  ts.service_category_code,
+  ts.service_type_code,
+  ts.service_reason_code,
+  ts.service_cost,
+  ts.billed_member_id                       AS service_billed_member_id,
+  ts.billed_vehicle_partner_id              AS service_billed_vehicle_partner_id,
+  ts.billed_amount                          AS service_billed_amount,
+  ts.warranty_claim_reference,
+  ts.service_notes,
+  -- Vehicle and reservation metadata
+  vm.model_name                             AS vehicle_model,
+  m.name                                    AS vehicle_make,
+  v.license_plate,
+  r.confirmation_code,
+  t.created_at,
+  t.updated_at
+FROM fs.vehicle_trip t
+LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+LEFT JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+LEFT JOIN fs.vendor vdr ON vdr.vendor_id = ts.vendor_id
+LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+LEFT JOIN fs.manufacturers m ON m.id = vm.manufacturer_id
+LEFT JOIN fs.reservations r ON r.id = t.vehicle_reservation_id;
+
+-- -----------------------------------------------------------------------------
+-- 8. Grant Permissions
+-- -----------------------------------------------------------------------------
+GRANT SELECT ON fs.trips TO PUBLIC;
+GRANT ALL ON fs.member_charge_type TO PUBLIC;
+GRANT ALL ON fs.toll_authority_select TO PUBLIC;
+GRANT ALL ON fs.service_category TO PUBLIC;
+GRANT ALL ON fs.vehicle_service_type TO PUBLIC;
+GRANT ALL ON fs.service_reason_select TO PUBLIC;
+GRANT ALL ON fs.member_trip_story_prompt TO PUBLIC;
+GRANT ALL ON fs.member_trip_story TO PUBLIC;
+GRANT ALL ON fs.member_trip_story_answer TO PUBLIC;
+GRANT ALL ON fs.vehicle_trip_service TO PUBLIC;
+GRANT ALL ON fs.vehicle_toll_transaction TO PUBLIC;
+GRANT ALL ON fs.branch_toll_source TO PUBLIC;
+
+COMMIT;
+
+```
+
+---
+
 ## api\scripts\compile_stage2_schema.py
 
 **File Path**: `api\scripts\compile_stage2_schema.py` | **Size**: 17,684 bytes
@@ -13578,7 +13802,7 @@ export async function closePool() {
 
 ## api\src\index.js
 
-**File Path**: `api\src\index.js` | **Size**: 4,082 bytes
+**File Path**: `api\src\index.js` | **Size**: 4,188 bytes
 
 ```javascript
 import 'express-async-errors';
@@ -13605,6 +13829,7 @@ import { mpcRouter } from './routes/mpc.js';
 import { vopRouter } from './routes/vop.js';
 import { rateCardsRouter } from './routes/rateCards.js';
 import { tripsRouter } from './routes/trips.js';
+import { tollsRouter } from './routes/tolls.js';
 
 const app = express();
 
@@ -13654,6 +13879,7 @@ app.use('/v1/mpc', mpcRouter);
 app.use('/v1/vop', vopRouter);
 app.use('/v1/rate-cards', rateCardsRouter);
 app.use('/v1/trips', tripsRouter);
+app.use('/v1/tolls', tollsRouter);
 
 // Root
 app.get('/', (_req, res) => {
@@ -13674,6 +13900,7 @@ app.get('/', (_req, res) => {
       '/v1/vop',
       '/v1/rate-cards',
       '/v1/trips',
+      '/v1/tolls',
     ],
   });
 });
@@ -21708,9 +21935,165 @@ tiersRouter.get('/', async (_req, res) => {
 
 ---
 
+## api\src\routes\tolls.js
+
+**File Path**: `api\src\routes\tolls.js` | **Size**: 3,939 bytes
+
+```javascript
+import { Router } from 'express';
+import { z } from 'zod';
+import { query, withTransaction } from '../db.js';
+import { HttpError } from '../middleware/errorHandler.js';
+import { optionalAuth, requireAuth } from '../middleware/auth.js';
+import {
+  importTolls,
+  matchTolls,
+  billTripTolls,
+  getUnmatchedTolls,
+  disputeToll,
+  excludeToll
+} from '../services/tolls.js';
+
+export const tollsRouter = Router();
+
+const tollItemSchema = z.object({
+  toll_tag: z.string().min(1),
+  tag: z.string().min(1).optional(),
+  transaction_at: z.string().datetime({ offset: true }).optional(),
+  timestamp: z.string().datetime({ offset: true }).optional(),
+  toll_authority_code: z.string().max(20).default('OTHER').optional(),
+  authority: z.string().max(20).optional(),
+  location: z.string().max(160).optional(),
+  gantry: z.string().max(160).optional(),
+  amount: z.number().positive(),
+  notes: z.string().max(500).optional(),
+});
+
+const importSchema = z.object({
+  batch_id: z.string().max(60).optional(),
+  batchId: z.string().max(60).optional(),
+  source: z.string().max(80).default('import').optional(),
+  tolls: z.array(tollItemSchema).min(1),
+});
+
+const noteSchema = z.object({
+  notes: z.string().max(1000).optional(),
+  reason: z.string().max(1000).optional(),
+});
+
+/**
+ * POST /v1/tolls/import
+ * Batch import of toll authority records with deduplication
+ */
+tollsRouter.post('/import', optionalAuth, async (req, res) => {
+  const data = importSchema.parse(req.body);
+  const batchId = data.batch_id || data.batchId;
+
+  const result = await withTransaction(async (client) => {
+    return await importTolls(client, {
+      batchId,
+      source: data.source || 'import',
+      tolls: data.tolls,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.status(201).json(result);
+});
+
+/**
+ * POST /v1/tolls/match
+ * Matches unmatched tolls against actual trip windows
+ */
+tollsRouter.post('/match', optionalAuth, async (req, res) => {
+  const result = await withTransaction(async (client) => {
+    return await matchTolls(client, {
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+/**
+ * GET /v1/tolls/unmatched
+ * Retrieves unmatched toll queue, ordered oldest first
+ */
+tollsRouter.get('/unmatched', optionalAuth, async (req, res) => {
+  const limit = req.query.limit ? Number(req.query.limit) : 50;
+  const offset = req.query.offset ? Number(req.query.offset) : 0;
+
+  const result = await withTransaction(async (client) => {
+    return await getUnmatchedTolls(client, { limit, offset });
+  });
+
+  res.json(result);
+});
+
+/**
+ * PATCH /v1/tolls/:id/dispute
+ * Marks a toll as Disputed
+ */
+tollsRouter.patch('/:id/dispute', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const body = noteSchema.parse(req.body || {});
+  const notes = body.notes || body.reason;
+
+  const result = await withTransaction(async (client) => {
+    return await disputeToll(client, {
+      tollId: id,
+      notes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ toll: result });
+});
+
+/**
+ * PATCH /v1/tolls/:id/exclude
+ * Marks a toll as Excluded (club decision)
+ */
+tollsRouter.patch('/:id/exclude', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const body = noteSchema.parse(req.body || {});
+  const notes = body.notes || body.reason;
+
+  const result = await withTransaction(async (client) => {
+    return await excludeToll(client, {
+      tollId: id,
+      notes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ toll: result });
+});
+
+/**
+ * POST /v1/tolls/bill/:tripId
+ * Convenience alias for billing tolls on a trip
+ */
+tollsRouter.post('/bill/:tripId', optionalAuth, async (req, res) => {
+  const { tripId } = req.params;
+
+  const result = await withTransaction(async (client) => {
+    return await billTripTolls(client, {
+      tripId,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+```
+
+---
+
 ## api\src\routes\trips.js
 
-**File Path**: `api\src\routes\trips.js` | **Size**: 10,752 bytes
+**File Path**: `api\src\routes\trips.js` | **Size**: 24,872 bytes
 
 ```javascript
 import { Router } from 'express';
@@ -21718,9 +22101,26 @@ import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
-import { checkoutTrip, checkinTrip, adjustTripMiles } from '../services/trips.js';
+import {
+  checkoutTrip,
+  checkinTrip,
+  adjustTripMiles,
+  getStoryPrompts,
+  getTripStory,
+  upsertTripStory,
+  saveStoryAnswers,
+  checkoutServiceTrip,
+  checkinServiceTrip,
+  updateServiceTripCost,
+  listServiceTrips,
+} from '../services/trips.js';
+import { billTripTolls } from '../services/tolls.js';
 
 export const tripsRouter = Router();
+
+// =============================================================================
+// SCHEMAS
+// =============================================================================
 
 const checkoutSchema = z.object({
   reservation_id: z.string().uuid().optional(),
@@ -21774,6 +22174,241 @@ const adjustMilesSchema = z.object({
   adjustment_reason: z.string().min(3).max(500).optional(),
   adjustmentReason: z.string().min(3).max(500).optional(),
 });
+
+// Guide 10.3: Trip Stories Schemas
+const storyAnswerItemSchema = z.object({
+  prompt_id: z.string().uuid().optional(),
+  promptId: z.string().uuid().optional(),
+  answer_text: z.string().max(5000).optional(),
+  answerText: z.string().max(5000).optional(),
+  assisted_text: z.string().max(5000).optional(),
+  assistedText: z.string().max(5000).optional(),
+  uses_assisted: z.boolean().default(false).optional(),
+  usesAssisted: z.boolean().default(false).optional(),
+});
+
+const storyUpsertSchema = z.object({
+  story_title: z.string().max(200).optional(),
+  storyTitle: z.string().max(200).optional(),
+  introduction: z.string().max(5000).optional(),
+  cover_document_id: z.string().uuid().optional(),
+  coverDocumentId: z.string().uuid().optional(),
+  cover_photo_url: z.string().url().optional(),
+  coverPhotoUrl: z.string().url().optional(),
+  visibility: z.enum(['private', 'members', 'public']).default('members').optional(),
+  answers: z.array(storyAnswerItemSchema).default([]).optional(),
+});
+
+const storyAnswersBatchSchema = z.object({
+  prompt_id: z.string().uuid().optional(),
+  promptId: z.string().uuid().optional(),
+  answer_text: z.string().max(5000).optional(),
+  answerText: z.string().max(5000).optional(),
+  assisted_text: z.string().max(5000).optional(),
+  assistedText: z.string().max(5000).optional(),
+  uses_assisted: z.boolean().default(false).optional(),
+  usesAssisted: z.boolean().default(false).optional(),
+  answers: z.array(storyAnswerItemSchema).optional(),
+});
+
+// Guide 10.4: Service Trips Schemas
+const serviceCheckoutSchema = z.object({
+  vehicle_id: z.string().uuid().optional(),
+  vehicleId: z.string().uuid().optional(),
+  vendor_id: z.string().uuid().optional(),
+  vendorId: z.string().uuid().optional(),
+  starting_odometer: z.number().nonnegative().optional(),
+  startingOdometer: z.number().nonnegative().optional(),
+  mileage: z.number().nonnegative().optional(),
+  service_category_code: z.string().max(40).default('maintenance').optional(),
+  serviceCategoryCode: z.string().max(40).default('maintenance').optional(),
+  service_type_code: z.string().max(40).default('scheduled').optional(),
+  serviceTypeCode: z.string().max(40).default('scheduled').optional(),
+  service_reason_code: z.string().max(40).default('oil_change').optional(),
+  serviceReasonCode: z.string().max(40).default('oil_change').optional(),
+  service_notes: z.string().max(5000).optional(),
+  serviceNotes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional(),
+  fuel_start_percent: z.number().min(0).max(100).default(100).optional(),
+  fuelStartPercent: z.number().min(0).max(100).default(100).optional(),
+  start_time_actual: z.string().datetime({ offset: true }).optional(),
+  startTimeActual: z.string().datetime({ offset: true }).optional(),
+});
+
+const serviceCheckinSchema = z.object({
+  closing_odometer: z.number().nonnegative().optional(),
+  closingOdometer: z.number().nonnegative().optional(),
+  mileage: z.number().nonnegative().optional(),
+  fuel_end_percent: z.number().min(0).max(100).default(100).optional(),
+  fuelEndPercent: z.number().min(0).max(100).default(100).optional(),
+  end_time_actual: z.string().datetime({ offset: true }).optional(),
+  endTimeActual: z.string().datetime({ offset: true }).optional(),
+  service_cost: z.number().nonnegative().optional(),
+  serviceCost: z.number().nonnegative().optional(),
+  warranty_claim_reference: z.string().max(60).optional(),
+  warrantyClaimReference: z.string().max(60).optional(),
+  service_notes: z.string().max(5000).optional(),
+  serviceNotes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional(),
+});
+
+const serviceCostSchema = z.object({
+  service_cost: z.number().nonnegative().optional(),
+  serviceCost: z.number().nonnegative().optional(),
+  warranty_claim_reference: z.string().max(60).optional(),
+  warrantyClaimReference: z.string().max(60).optional(),
+  billed_member_id: z.string().uuid().optional(),
+  billedMemberId: z.string().uuid().optional(),
+  billed_vehicle_partner_id: z.string().uuid().optional(),
+  billedVehiclePartnerId: z.string().uuid().optional(),
+  billed_amount: z.number().nonnegative().optional(),
+  billedAmount: z.number().nonnegative().optional(),
+  service_notes: z.string().max(5000).optional(),
+  serviceNotes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional(),
+});
+
+// =============================================================================
+// GUIDE 10.3: STORY PROMPTS (MUST BE BEFORE /:id ROUTE)
+// =============================================================================
+
+/**
+ * GET /v1/trips/stories/prompts
+ * Returns active story prompts in sort_order
+ */
+tripsRouter.get('/stories/prompts', optionalAuth, async (req, res) => {
+  const result = await withTransaction(async (client) => {
+    return await getStoryPrompts(client);
+  });
+  res.json({ prompts: result });
+});
+
+// =============================================================================
+// GUIDE 10.4: SERVICE TRIPS (MUST BE BEFORE /:id ROUTE)
+// =============================================================================
+
+/**
+ * POST /v1/trips/service/checkout
+ * Dispatches vehicle on vendor maintenance/repair service trip
+ */
+tripsRouter.post('/service/checkout', optionalAuth, async (req, res) => {
+  const data = serviceCheckoutSchema.parse(req.body);
+  const vehicleId = data.vehicle_id || data.vehicleId;
+  const startingOdometer = data.starting_odometer ?? data.startingOdometer ?? data.mileage;
+  const vendorId = data.vendor_id || data.vendorId || null;
+  const serviceCategoryCode = data.service_category_code || data.serviceCategoryCode || 'maintenance';
+  const serviceTypeCode = data.service_type_code || data.serviceTypeCode || 'scheduled';
+  const serviceReasonCode = data.service_reason_code || data.serviceReasonCode || 'oil_change';
+  const serviceNotes = data.service_notes || data.serviceNotes || data.notes || null;
+  const fuelStartPercent = data.fuel_start_percent ?? data.fuelStartPercent ?? 100;
+  const startTimeActual = data.start_time_actual || data.startTimeActual || null;
+
+  if (!vehicleId) throw new HttpError(400, 'vehicle_id is required');
+  if (startingOdometer == null) throw new HttpError(400, 'starting_odometer is required');
+
+  const result = await withTransaction(async (client) => {
+    return await checkoutServiceTrip(client, {
+      vehicleId,
+      vendorId,
+      startingOdometer,
+      serviceCategoryCode,
+      serviceTypeCode,
+      serviceReasonCode,
+      serviceNotes,
+      fuelStartPercent,
+      startTimeActual,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.status(201).json({ service_trip: result });
+});
+
+/**
+ * GET /v1/trips/service
+ * List service trips
+ */
+tripsRouter.get('/service', optionalAuth, async (req, res) => {
+  const { vehicle_id, vendor_id, status, limit, offset } = req.query;
+
+  const result = await withTransaction(async (client) => {
+    return await listServiceTrips(client, {
+      vehicleId: vehicle_id || null,
+      vendorId: vendor_id || null,
+      status: status || null,
+      limit: limit ? Number(limit) : 50,
+      offset: offset ? Number(offset) : 0,
+    });
+  });
+
+  res.json(result);
+});
+
+/**
+ * POST /v1/trips/service/:id/checkin
+ * Closes service trip, logs closing odometer, isolates service miles from member allowances
+ */
+tripsRouter.post('/service/:id/checkin', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const data = serviceCheckinSchema.parse(req.body);
+  const closingOdometer = data.closing_odometer ?? data.closingOdometer ?? data.mileage;
+  const fuelEndPercent = data.fuel_end_percent ?? data.fuelEndPercent ?? 100;
+  const endTimeActual = data.end_time_actual || data.endTimeActual || null;
+  const serviceCost = data.service_cost ?? data.serviceCost ?? null;
+  const warrantyClaimReference = data.warranty_claim_reference || data.warrantyClaimReference || null;
+  const serviceNotes = data.service_notes || data.serviceNotes || data.notes || null;
+
+  if (closingOdometer == null) throw new HttpError(400, 'closing_odometer is required');
+
+  const result = await withTransaction(async (client) => {
+    return await checkinServiceTrip(client, {
+      tripId: id,
+      closingOdometer,
+      fuelEndPercent,
+      endTimeActual,
+      serviceCost,
+      warrantyClaimReference,
+      serviceNotes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ service_trip: result });
+});
+
+/**
+ * PATCH /v1/trips/service/:id/cost
+ * Records service cost, warranty claim, and handles split/partner billing (Rule 10.4-R07)
+ */
+tripsRouter.patch('/service/:id/cost', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const data = serviceCostSchema.parse(req.body);
+  const serviceCost = data.service_cost ?? data.serviceCost ?? null;
+  const warrantyClaimReference = data.warranty_claim_reference || data.warrantyClaimReference || null;
+  const billedMemberId = data.billed_member_id || data.billedMemberId || null;
+  const billedVehiclePartnerId = data.billed_vehicle_partner_id || data.billedVehiclePartnerId || null;
+  const billedAmount = data.billed_amount ?? data.billedAmount ?? null;
+  const serviceNotes = data.service_notes || data.serviceNotes || data.notes || null;
+
+  const result = await withTransaction(async (client) => {
+    return await updateServiceTripCost(client, {
+      tripId: id,
+      serviceCost,
+      warrantyClaimReference,
+      billedMemberId,
+      billedVehiclePartnerId,
+      billedAmount,
+      serviceNotes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ service_trip: result });
+});
+
+// =============================================================================
+// GUIDE 10.1 & 10.2: MEMBER TRIPS CHECKOUT & CHECKIN
+// =============================================================================
 
 /**
  * POST /v1/trips/checkout
@@ -21871,9 +22506,116 @@ tripsRouter.post('/:id/adjust-miles', optionalAuth, async (req, res) => {
   res.json({ adjustment: result });
 });
 
+// =============================================================================
+// GUIDE 10.3: TRIP STORIES (INDIVIDUAL TRIP)
+// =============================================================================
+
+/**
+ * GET /v1/trips/:id/story
+ * Retrieves the story and prompts/answers for a completed trip
+ */
+tripsRouter.get('/:id/story', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const result = await withTransaction(async (client) => {
+    return await getTripStory(client, {
+      tripId: id,
+      memberId: req.user?.memberId || null,
+      isStaff: req.user?.role === 'staff' || req.user?.role === 'admin',
+    });
+  });
+
+  if (!result) {
+    return res.status(404).json({ message: `No story created yet for trip ${id}`, story: null });
+  }
+
+  res.json({ story: result });
+});
+
+/**
+ * POST /v1/trips/:id/story
+ * Creates or updates the story header and answers for a completed trip
+ */
+tripsRouter.post('/:id/story', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const data = storyUpsertSchema.parse(req.body);
+
+  const result = await withTransaction(async (client) => {
+    return await upsertTripStory(client, {
+      tripId: id,
+      storyTitle: data.story_title || data.storyTitle || null,
+      introduction: data.introduction || null,
+      coverDocumentId: data.cover_document_id || data.coverDocumentId || null,
+      coverPhotoUrl: data.cover_photo_url || data.coverPhotoUrl || null,
+      visibility: data.visibility || 'members',
+      answers: data.answers || [],
+      memberId: req.user?.memberId || null,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.status(201).json({ story: result });
+});
+
+/**
+ * POST /v1/trips/:id/story/answers
+ * Autosaves one or more story answers
+ */
+tripsRouter.post('/:id/story/answers', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const body = req.body;
+
+  let answerList = [];
+  if (Array.isArray(body)) {
+    answerList = body;
+  } else if (Array.isArray(body.answers)) {
+    answerList = body.answers;
+  } else if (body.prompt_id || body.promptId) {
+    answerList = [body];
+  } else {
+    throw new HttpError(400, 'answers array or prompt_id answer object is required');
+  }
+
+  const result = await withTransaction(async (client) => {
+    return await saveStoryAnswers(client, {
+      tripId: id,
+      answers: answerList,
+      memberId: req.user?.memberId || null,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+// =============================================================================
+// GUIDE 10.5: TOLL RECHARGING FOR A TRIP
+// =============================================================================
+
+/**
+ * POST /v1/trips/:id/tolls/bill
+ * Recharges all matched tolls on this trip as a single aggregate member charge
+ */
+tripsRouter.post('/:id/tolls/bill', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const result = await withTransaction(async (client) => {
+    return await billTripTolls(client, {
+      tripId: id,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+// =============================================================================
+// CORE TRIP RETRIEVAL & LISTING
+// =============================================================================
+
 /**
  * GET /v1/trips/:id
- * Retrieve trip details, companion member trip details, and odometer log entries
+ * Retrieve trip details, companion member/service details, and odometer log entries
  */
 tripsRouter.get('/:id', optionalAuth, async (req, res) => {
   const { id } = req.params;
@@ -21894,6 +22636,13 @@ tripsRouter.get('/:id', optionalAuth, async (req, res) => {
             tm.total_points,
             tm.calculation_version,
             tm.calculation_detail,
+            ts.vendor_id as service_vendor_id,
+            ts.service_category_code,
+            ts.service_type_code,
+            ts.service_reason_code,
+            ts.service_cost,
+            ts.billed_amount as service_billed_amount,
+            ts.warranty_claim_reference,
             vm.model_name as vehicle_model,
             m.name as vehicle_make,
             v.license_plate,
@@ -21902,6 +22651,7 @@ tripsRouter.get('/:id', optionalAuth, async (req, res) => {
             r.member_id
        FROM fs.vehicle_trip t
        LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
        LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
        LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
        LEFT JOIN fs.manufacturers m ON m.id = vm.manufacturer_id
@@ -21937,10 +22687,10 @@ tripsRouter.get('/:id', optionalAuth, async (req, res) => {
 
 /**
  * GET /v1/trips
- * List trips with optional filtering by vehicle, reservation, member, or status
+ * List trips with optional filtering by vehicle, reservation, member, trip_type, or status
  */
 tripsRouter.get('/', optionalAuth, async (req, res) => {
-  const { reservation_id, vehicle_id, member_id, status, limit = 50, offset = 0 } = req.query;
+  const { reservation_id, vehicle_id, member_id, trip_type, status, limit = 50, offset = 0 } = req.query;
 
   const conditions = [];
   const params = [];
@@ -21955,8 +22705,12 @@ tripsRouter.get('/', optionalAuth, async (req, res) => {
     params.push(vehicle_id);
   }
   if (member_id) {
-    conditions.push(`r.member_id = $${paramIdx++}`);
+    conditions.push(`(r.member_id = $${paramIdx} OR tm.member_id = $${paramIdx++})`);
     params.push(member_id);
+  }
+  if (trip_type) {
+    conditions.push(`t.trip_type_code = $${paramIdx++}`);
+    params.push(trip_type);
   }
   if (status === 'open') {
     conditions.push(`t.end_time_actual IS NULL`);
@@ -21980,7 +22734,7 @@ tripsRouter.get('/', optionalAuth, async (req, res) => {
            vm.model_name as vehicle_model,
            m.name as vehicle_make,
            r.confirmation_code,
-           r.member_id
+           COALESCE(tm.member_id, r.member_id) as member_id
       FROM fs.vehicle_trip t
       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
@@ -24290,9 +25044,398 @@ export async function checkAnnualTierCap(ctx, days) {
 
 ---
 
+## api\src\services\tolls.js
+
+**File Path**: `api\src\services\tolls.js` | **Size**: 12,887 bytes
+
+```javascript
+/**
+ * Freedom Supercars - Toll Transactions Service (Guide 10.5)
+ *
+ * Implements:
+ * - Batch import of toll authority files with deduplication on (authority, tag, timestamp)
+ * - Matching of unmatched tolls against actual trip windows (actual times, never reservation times)
+ * - Service trip tolls marked as club cost (matched, no member charge)
+ * - Member trip tolls aggregated into a single member charge at billing time
+ * - Unmatched toll working queue (fleet diagnostic & anomaly detection)
+ * - Toll disputes and exclusions management
+ */
+
+import { HttpError } from '../middleware/errorHandler.js';
+
+/**
+ * Import batch of toll transactions with deduplication (Guide 10.5 Steps 1 & 2)
+ */
+export async function importTolls(client, {
+  batchId = null,
+  source = 'import',
+  tolls = [],
+  actorUserId = null
+}) {
+  if (!Array.isArray(tolls) || tolls.length === 0) {
+    throw new HttpError(400, 'tolls array is required and must not be empty');
+  }
+
+  const effectiveBatchId = batchId || `TOLL-BATCH-${Date.now()}`;
+  let importedCount = 0;
+  let duplicateCount = 0;
+  const importedRecords = [];
+
+  for (const item of tolls) {
+    const tollTag = (item.toll_tag || item.tag || '').trim();
+    const transactionAt = item.transaction_at || item.timestamp;
+    const authorityCode = (item.toll_authority_code || item.authority || 'OTHER').trim();
+    const amount = Number(item.amount);
+    const location = item.location || item.gantry || null;
+    const notes = item.notes || null;
+
+    if (!tollTag) throw new HttpError(400, 'toll_tag is required for every toll');
+    if (!transactionAt) throw new HttpError(400, 'transaction_at is required for every toll');
+    if (isNaN(amount) || amount <= 0) throw new HttpError(400, `Valid positive amount required for toll on tag ${tollTag}`);
+
+    // Resolve vehicle_id from toll_tag or license_plate
+    let vehicleId = null;
+    const vehQuery = await client.query(
+      `SELECT vehicle_id FROM (
+         SELECT vehicle_id FROM fs.vehicle_registration_warranty WHERE LOWER(toll_tag) = LOWER($1) OR LOWER(license_plate) = LOWER($1)
+         UNION
+         SELECT id as vehicle_id FROM fs.vehicles WHERE LOWER(license_plate) = LOWER($1)
+       ) sub LIMIT 1`,
+      [tollTag]
+    );
+
+    if (vehQuery.rowCount > 0) {
+      vehicleId = vehQuery.rows[0].vehicle_id;
+    }
+
+    // Insert with ON CONFLICT DO NOTHING for deduplication (Guide 10.5 Developer Note 2)
+    const insertRes = await client.query(
+      `INSERT INTO fs.vehicle_toll_transaction (
+         vehicle_id,
+         toll_tag,
+         transaction_at,
+         toll_authority_code,
+         location,
+         amount,
+         import_source,
+         import_batch_id,
+         match_status,
+         notes,
+         created_by_user_id
+       ) VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, 
+         'Unmatched'::fs.vehicle_toll_transaction_match_status_enum,
+         $9, $10
+       )
+       ON CONFLICT (toll_authority_code, toll_tag, transaction_at) DO NOTHING
+       RETURNING vehicle_toll_transaction_id, vehicle_id, toll_tag, amount, match_status`,
+      [
+        vehicleId,
+        tollTag,
+        new Date(transactionAt),
+        authorityCode,
+        location,
+        amount,
+        source,
+        effectiveBatchId,
+        notes,
+        actorUserId
+      ]
+    );
+
+    if (insertRes.rowCount > 0) {
+      importedCount++;
+      importedRecords.push(insertRes.rows[0]);
+    } else {
+      duplicateCount++;
+    }
+  }
+
+  return {
+    batch_id: effectiveBatchId,
+    total_submitted: tolls.length,
+    imported_count: importedCount,
+    duplicate_count: duplicateCount,
+    records: importedRecords
+  };
+}
+
+/**
+ * Match Unmatched Tolls against Actual Trip Windows (Guide 10.5 Step 2)
+ *
+ * Match condition:
+ * Vehicle ID matches AND start_time_actual <= transaction_at <= (end_time_actual OR now())
+ */
+export async function matchTolls(client, { actorUserId = null } = {}) {
+  // 1. Fetch all unmatched tolls that have a resolved vehicle_id
+  const unmatchedRes = await client.query(
+    `SELECT vehicle_toll_transaction_id, vehicle_id, transaction_at, amount
+       FROM fs.vehicle_toll_transaction
+      WHERE match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum
+        AND vehicle_id IS NOT NULL`
+  );
+
+  let matchedCount = 0;
+  const matchedList = [];
+
+  for (const toll of unmatchedRes.rows) {
+    // Find matching trip by vehicle and actual trip window
+    const tripMatch = await client.query(
+      `SELECT t.vehicle_trip_id, t.trip_type_code, tm.member_id
+         FROM fs.vehicle_trip t
+         LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+        WHERE t.vehicle_id = $1
+          AND t.start_time_actual <= $2
+          AND ($2 <= COALESCE(t.end_time_actual, now()))
+        ORDER BY t.start_time_actual DESC
+        LIMIT 1`,
+      [toll.vehicle_id, toll.transaction_at]
+    );
+
+    if (tripMatch.rowCount > 0) {
+      const trip = tripMatch.rows[0];
+      await client.query(
+        `UPDATE fs.vehicle_toll_transaction
+            SET vehicle_trip_id = $1,
+                match_status = 'Matched'::fs.vehicle_toll_transaction_match_status_enum,
+                updated_at = now(),
+                updated_by_user_id = $2
+          WHERE vehicle_toll_transaction_id = $3`,
+        [trip.vehicle_trip_id, actorUserId, toll.vehicle_toll_transaction_id]
+      );
+
+      matchedCount++;
+      matchedList.push({
+        toll_id: toll.vehicle_toll_transaction_id,
+        trip_id: trip.vehicle_trip_id,
+        trip_type: trip.trip_type_code,
+        member_id: trip.member_id || null,
+        amount: Number(toll.amount)
+      });
+    }
+  }
+
+  // Get current remaining count
+  const remainingRes = await client.query(
+    `SELECT count(*) FROM fs.vehicle_toll_transaction
+      WHERE match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum`
+  );
+  const remainingCount = parseInt(remainingRes.rows[0].count, 10);
+
+  return {
+    matched_count: matchedCount,
+    remaining_unmatched_count: remainingCount,
+    matched_tolls: matchedList
+  };
+}
+
+/**
+ * Bill All Matched Tolls for a Trip in Aggregate (Guide 10.5 Step 3)
+ *
+ * Captures individually, bills in aggregate:
+ * 1. Sums all Matched tolls for the trip where member_charge_id IS NULL
+ * 2. Excludes Disputed and Excluded tolls
+ * 3. Creates ONE member charge for the sum
+ * 4. Updates all those tolls with member_charge_id pointing at that charge
+ */
+export async function billTripTolls(client, {
+  tripId,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // 1. Fetch trip and member details
+  const tripRes = await client.query(
+    `SELECT t.vehicle_trip_id, t.vehicle_reservation_id, t.vehicle_id, t.trip_type_code,
+            tm.member_id, r.confirmation_code
+       FROM fs.vehicle_trip t
+       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.reservations r ON r.id = t.vehicle_reservation_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) {
+    throw new HttpError(404, `Trip ${tripId} not found`);
+  }
+
+  const trip = tripRes.rows[0];
+
+  // If service or internal trip: tolls are club cost, matched but no member charge (Guide 10.5 Step 2.4)
+  if (trip.trip_type_code === 'service' || trip.trip_type_code === 'internal' || !trip.member_id) {
+    return {
+      billed: false,
+      is_club_cost: true,
+      trip_type: trip.trip_type_code,
+      message: 'Tolls on service or internal trips are absorbed as club costs per Guide 10.5; no member charge posted.'
+    };
+  }
+
+  // 2. Fetch all matched, unbilled tolls for this trip
+  const tollsRes = await client.query(
+    `SELECT vehicle_toll_transaction_id, amount, toll_authority_code, location, transaction_at
+       FROM fs.vehicle_toll_transaction
+      WHERE vehicle_trip_id = $1
+        AND match_status = 'Matched'::fs.vehicle_toll_transaction_match_status_enum
+        AND member_charge_id IS NULL
+      ORDER BY transaction_at ASC`,
+    [tripId]
+  );
+
+  if (tollsRes.rowCount === 0) {
+    return {
+      billed: false,
+      message: `No unbilled matched tolls found for trip ${tripId}`
+    };
+  }
+
+  const tolls = tollsRes.rows;
+  const totalAmount = tolls.reduce((sum, t) => sum + Number(t.amount), 0);
+  const roundedTotal = Math.round(totalAmount * 100) / 100;
+  const tollIds = tolls.map((t) => t.vehicle_toll_transaction_id);
+
+  // 3. Post a single aggregated member charge (Guide 10.5 Step 3.2)
+  const description = `Toll charges for Trip ${trip.confirmation_code || tripId.slice(0, 8)} (${tolls.length} ${tolls.length === 1 ? 'toll' : 'tolls'})`;
+
+  let memberChargeId;
+  const chargeRes = await client.query(
+    `INSERT INTO fs.member_charge (
+       member_id,
+       vehicle_trip_id,
+       reservation_id,
+       vehicle_id,
+       charge_type_code,
+       charge_style,
+       charge_amount,
+       description,
+       payment_status,
+       created_by_user_id
+     ) VALUES (
+       (SELECT member_id FROM fs.member WHERE member_id = $1),
+       $2,
+       (SELECT vehicle_reservation_id FROM fs.vehicle_reservation WHERE vehicle_reservation_id = $3),
+       (SELECT vehicle_id FROM fs.vehicle WHERE vehicle_id = $4),
+       'TOLL',
+       'DEBIT'::fs.member_charge_charge_style_enum,
+       $5,
+       $6,
+       'PENDING'::fs.member_charge_payment_status_enum,
+       $7
+     ) RETURNING member_charge_id, charge_amount, description, payment_status, created_at`,
+    [
+      trip.member_id,
+      tripId,
+      trip.vehicle_reservation_id,
+      trip.vehicle_id,
+      roundedTotal,
+      description,
+      actorUserId
+    ]
+  );
+
+  memberChargeId = chargeRes.rows[0].member_charge_id;
+
+  // 4. Update every toll in this group to point at the one charge (Guide 10.5 Step 3.4)
+  await client.query(
+    `UPDATE fs.vehicle_toll_transaction
+        SET member_charge_id = $1,
+            updated_at = now(),
+            updated_by_user_id = $2
+      WHERE vehicle_toll_transaction_id = ANY($3::uuid[])`,
+    [memberChargeId, actorUserId, tollIds]
+  );
+
+  return {
+    billed: true,
+    member_charge_id: memberChargeId,
+    charge: chargeRes.rows[0],
+    toll_count: tolls.length,
+    total_amount: roundedTotal,
+    toll_ids: tollIds
+  };
+}
+
+/**
+ * Get Unmatched Toll Queue (Guide 10.5 Step 5: Working the Unmatched)
+ */
+export async function getUnmatchedTolls(client, { limit = 50, offset = 0 } = {}) {
+  const res = await client.query(
+    `SELECT t.vehicle_toll_transaction_id as id,
+            t.toll_tag,
+            t.transaction_at,
+            t.toll_authority_code,
+            t.location,
+            t.amount,
+            t.import_source,
+            t.import_batch_id,
+            t.match_status,
+            t.notes,
+            v.id as vehicle_id,
+            v.license_plate,
+            vm.model_name as vehicle_model
+       FROM fs.vehicle_toll_transaction t
+       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+       LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+      WHERE t.match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum
+      ORDER BY t.transaction_at ASC
+      LIMIT $1 OFFSET $2`,
+    [Math.min(100, Math.max(1, limit)), Math.max(0, offset)]
+  );
+
+  const countRes = await client.query(
+    `SELECT count(*) FROM fs.vehicle_toll_transaction
+      WHERE match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum`
+  );
+
+  return {
+    unmatched_tolls: res.rows,
+    total_unmatched: parseInt(countRes.rows[0].count, 10)
+  };
+}
+
+/**
+ * Mark a Toll as Disputed (Guide 10.5 Step 4)
+ */
+export async function disputeToll(client, { tollId, notes = null, actorUserId = null }) {
+  const res = await client.query(
+    `UPDATE fs.vehicle_toll_transaction
+        SET match_status = 'Disputed'::fs.vehicle_toll_transaction_match_status_enum,
+            notes = CASE WHEN $1::text IS NOT NULL THEN COALESCE(notes || E'\n', '') || $1::text ELSE notes END,
+            updated_at = now(),
+            updated_by_user_id = $2
+      WHERE vehicle_toll_transaction_id = $3
+      RETURNING *`,
+    [notes, actorUserId, tollId]
+  );
+  if (res.rowCount === 0) throw new HttpError(404, `Toll ${tollId} not found`);
+  return res.rows[0];
+}
+
+/**
+ * Mark a Toll as Excluded (Guide 10.5 Step 2.5)
+ */
+export async function excludeToll(client, { tollId, notes = null, actorUserId = null }) {
+  const res = await client.query(
+    `UPDATE fs.vehicle_toll_transaction
+        SET match_status = 'Excluded'::fs.vehicle_toll_transaction_match_status_enum,
+            notes = CASE WHEN $1::text IS NOT NULL THEN COALESCE(notes || E'\n', '') || $1::text ELSE notes END,
+            updated_at = now(),
+            updated_by_user_id = $2
+      WHERE vehicle_toll_transaction_id = $3
+      RETURNING *`,
+    [notes, actorUserId, tollId]
+  );
+  if (res.rowCount === 0) throw new HttpError(404, `Toll ${tollId} not found`);
+  return res.rows[0];
+}
+
+```
+
+---
+
 ## api\src\services\trips.js
 
-**File Path**: `api\src\services\trips.js` | **Size**: 25,619 bytes
+**File Path**: `api\src\services\trips.js` | **Size**: 50,554 bytes
 
 ```javascript
 /**
@@ -25028,6 +26171,810 @@ export async function adjustTripMiles(client, {
     miles_member: newMilesMember
   };
 }
+
+/**
+ * ============================================================================
+ * GUIDE 10.3: TRIP STORIES
+ * ============================================================================
+ */
+
+/**
+ * Retrieve active story prompts ordered by sort_order
+ */
+export async function getStoryPrompts(client) {
+  const res = await client.query(
+    `SELECT member_trip_story_prompt_id AS prompt_id,
+            prompt_code,
+            prompt_text,
+            help_text,
+            sort_order
+       FROM fs.member_trip_story_prompt
+      WHERE is_active = TRUE
+      ORDER BY sort_order ASC, created_at ASC`
+  );
+  return res.rows;
+}
+
+/**
+ * Retrieve the story and answers for a specific trip
+ */
+export async function getTripStory(client, { tripId, memberId = null, isStaff = false }) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  const storyRes = await client.query(
+    `SELECT s.*, 
+            t.vehicle_id, 
+            t.vehicle_reservation_id,
+            t.end_time_actual
+       FROM fs.member_trip_story s
+       JOIN fs.vehicle_trip t ON t.vehicle_trip_id = s.vehicle_trip_id
+      WHERE s.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (storyRes.rowCount === 0) {
+    return null;
+  }
+
+  const story = storyRes.rows[0];
+
+  // Privacy rule: private stories are accessible only by author and staff
+  if (story.visibility === 'private' && !isStaff && memberId && story.member_id !== memberId) {
+    throw new HttpError(403, 'This trip story is private to the author');
+  }
+
+  const answersRes = await client.query(
+    `SELECT a.member_trip_story_answer_id AS answer_id,
+            a.member_trip_story_prompt_id AS prompt_id,
+            p.prompt_code,
+            p.prompt_text,
+            a.answer_text,
+            a.assisted_text,
+            a.assisted_at,
+            a.uses_assisted,
+            a.updated_at
+       FROM fs.member_trip_story_answer a
+       JOIN fs.member_trip_story_prompt p ON p.member_trip_story_prompt_id = a.member_trip_story_prompt_id
+      WHERE a.member_trip_story_id = $1
+      ORDER BY p.sort_order ASC, a.created_at ASC`,
+    [story.member_trip_story_id]
+  );
+
+  return {
+    ...story,
+    answers: answersRes.rows,
+  };
+}
+
+/**
+ * Create or update a trip story header and answers (Guide 10.3)
+ */
+export async function upsertTripStory(client, {
+  tripId,
+  storyTitle = null,
+  introduction = null,
+  coverDocumentId = null,
+  coverPhotoUrl = null,
+  visibility = 'members',
+  answers = [],
+  memberId = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // 1. Verify trip exists and is completed (Guide 10.3 Step 1)
+  const tripRes = await client.query(
+    `SELECT t.vehicle_trip_id, t.vehicle_reservation_id, t.end_time_actual, tm.member_id AS trip_member_id
+       FROM fs.vehicle_trip t
+       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Trip ${tripId} not found`);
+  const trip = tripRes.rows[0];
+
+  if (!trip.end_time_actual) {
+    throw new HttpError(400, 'Trip is not completed yet; stories can only be recorded for closed trips (Guide 10.3 Step 1)');
+  }
+
+  const authorMemberId = memberId || trip.trip_member_id || null;
+  const now = new Date();
+
+  // 2. Check if story already exists (Enforce 1 story per trip)
+  const existingStory = await client.query(
+    `SELECT member_trip_story_id FROM fs.member_trip_story WHERE vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  let storyId;
+  if (existingStory.rowCount > 0) {
+    storyId = existingStory.rows[0].member_trip_story_id;
+    await client.query(
+      `UPDATE fs.member_trip_story
+          SET story_title = COALESCE($1, story_title),
+              introduction = COALESCE($2, introduction),
+              cover_document_id = COALESCE($3, cover_document_id),
+              cover_photo_url = COALESCE($4, cover_photo_url),
+              visibility = COALESCE($5, visibility),
+              last_saved_at = $6,
+              updated_at = $6,
+              updated_by_user_id = $7
+        WHERE member_trip_story_id = $8`,
+      [
+        storyTitle,
+        introduction,
+        coverDocumentId,
+        coverPhotoUrl,
+        visibility,
+        now,
+        actorUserId,
+        storyId
+      ]
+    );
+  } else {
+    const insertStory = await client.query(
+      `INSERT INTO fs.member_trip_story (
+         vehicle_trip_id,
+         member_id,
+         story_title,
+         introduction,
+         cover_document_id,
+         cover_photo_url,
+         visibility,
+         started_at,
+         last_saved_at,
+         created_by_user_id,
+         updated_by_user_id
+       ) VALUES (
+         $1, 
+         (SELECT member_id FROM fs.member WHERE member_id = $2),
+         $3, $4, $5, $6, $7, $8, $8, $9, $9
+       ) RETURNING member_trip_story_id`,
+      [
+        tripId,
+        authorMemberId,
+        storyTitle,
+        introduction,
+        coverDocumentId,
+        coverPhotoUrl,
+        visibility || 'members',
+        now,
+        actorUserId
+      ]
+    );
+    storyId = insertStory.rows[0].member_trip_story_id;
+  }
+
+  // 3. Upsert answers if provided
+  if (Array.isArray(answers) && answers.length > 0) {
+    for (const ans of answers) {
+      const promptId = ans.prompt_id || ans.promptId;
+      if (!promptId) continue;
+
+      await client.query(
+        `INSERT INTO fs.member_trip_story_answer (
+           member_trip_story_id,
+           member_trip_story_prompt_id,
+           answer_text,
+           assisted_text,
+           uses_assisted,
+           created_by_user_id,
+           updated_by_user_id
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $6
+         )
+         ON CONFLICT (member_trip_story_id, member_trip_story_prompt_id) DO UPDATE
+         SET answer_text = COALESCE(EXCLUDED.answer_text, fs.member_trip_story_answer.answer_text),
+             assisted_text = COALESCE(EXCLUDED.assisted_text, fs.member_trip_story_answer.assisted_text),
+             uses_assisted = COALESCE(EXCLUDED.uses_assisted, fs.member_trip_story_answer.uses_assisted),
+             updated_at = now(),
+             updated_by_user_id = EXCLUDED.updated_by_user_id`,
+        [
+          storyId,
+          promptId,
+          ans.answer_text ?? ans.answerText ?? null,
+          ans.assisted_text ?? ans.assistedText ?? null,
+          ans.uses_assisted ?? ans.usesAssisted ?? false,
+          actorUserId
+        ]
+      );
+    }
+  }
+
+  return await getTripStory(client, { tripId, memberId: authorMemberId, isStaff: true });
+}
+
+/**
+ * Autosave individual or batch story answers (Guide 10.3 Step 3)
+ */
+export async function saveStoryAnswers(client, {
+  tripId,
+  answers = [],
+  memberId = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // Verify trip exists and is completed
+  const tripRes = await client.query(
+    `SELECT t.vehicle_trip_id, t.end_time_actual, tm.member_id AS trip_member_id
+       FROM fs.vehicle_trip t
+       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Trip ${tripId} not found`);
+  const trip = tripRes.rows[0];
+
+  if (!trip.end_time_actual) {
+    throw new HttpError(400, 'Trip is not completed yet; stories can only be recorded for closed trips (Guide 10.3)');
+  }
+
+  const authorMemberId = memberId || trip.trip_member_id || null;
+  const now = new Date();
+
+  // Find or create story record
+  let storyId;
+  const existingStory = await client.query(
+    `SELECT member_trip_story_id FROM fs.member_trip_story WHERE vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (existingStory.rowCount > 0) {
+    storyId = existingStory.rows[0].member_trip_story_id;
+  } else {
+    const insertStory = await client.query(
+      `INSERT INTO fs.member_trip_story (
+         vehicle_trip_id,
+         member_id,
+         visibility,
+         started_at,
+         last_saved_at,
+         created_by_user_id,
+         updated_by_user_id
+       ) VALUES (
+         $1, 
+         (SELECT member_id FROM fs.member WHERE member_id = $2),
+         'members', $3, $3, $4, $4
+       ) RETURNING member_trip_story_id`,
+      [tripId, authorMemberId, now, actorUserId]
+    );
+    storyId = insertStory.rows[0].member_trip_story_id;
+  }
+
+  const answerList = Array.isArray(answers) ? answers : [answers];
+  let savedCount = 0;
+
+  for (const ans of answerList) {
+    const promptId = ans.prompt_id || ans.promptId;
+    if (!promptId) continue;
+
+    await client.query(
+      `INSERT INTO fs.member_trip_story_answer (
+         member_trip_story_id,
+         member_trip_story_prompt_id,
+         answer_text,
+         assisted_text,
+         uses_assisted,
+         created_by_user_id,
+         updated_by_user_id
+       ) VALUES (
+         $1, $2, $3, $4, $5, $6, $6
+       )
+       ON CONFLICT (member_trip_story_id, member_trip_story_prompt_id) DO UPDATE
+       SET answer_text = COALESCE(EXCLUDED.answer_text, fs.member_trip_story_answer.answer_text),
+           assisted_text = COALESCE(EXCLUDED.assisted_text, fs.member_trip_story_answer.assisted_text),
+           uses_assisted = COALESCE(EXCLUDED.uses_assisted, fs.member_trip_story_answer.uses_assisted),
+           updated_at = now(),
+           updated_by_user_id = EXCLUDED.updated_by_user_id`,
+      [
+        storyId,
+        promptId,
+        ans.answer_text ?? ans.answerText ?? null,
+        ans.assisted_text ?? ans.assistedText ?? null,
+        ans.uses_assisted ?? ans.usesAssisted ?? false,
+        actorUserId
+      ]
+    );
+    savedCount++;
+  }
+
+  // Stamp last_saved_at on the story
+  await client.query(
+    `UPDATE fs.member_trip_story
+        SET last_saved_at = $1,
+            updated_at = $1,
+            updated_by_user_id = $2
+      WHERE member_trip_story_id = $3`,
+    [now, actorUserId, storyId]
+  );
+
+  return {
+    saved: true,
+    trip_id: tripId,
+    story_id: storyId,
+    answers_saved: savedCount,
+    last_saved_at: now
+  };
+}
+
+/**
+ * ============================================================================
+ * GUIDE 10.4: SERVICE TRIPS
+ * ============================================================================
+ */
+
+/**
+ * Checkout a Service Trip (Guide 10.4 Step 1)
+ */
+export async function checkoutServiceTrip(client, {
+  vehicleId,
+  vendorId = null,
+  startingOdometer,
+  serviceCategoryCode = 'maintenance',
+  serviceTypeCode = 'scheduled',
+  serviceReasonCode = 'oil_change',
+  serviceNotes = null,
+  fuelStartPercent = 100,
+  startTimeActual = null,
+  actorUserId = null
+}) {
+  if (!vehicleId) throw new HttpError(400, 'vehicleId is required');
+  if (startingOdometer == null || isNaN(startingOdometer) || Number(startingOdometer) < 0) {
+    throw new HttpError(400, 'Valid startingOdometer is required');
+  }
+
+  const departureTime = startTimeActual ? new Date(startTimeActual) : new Date();
+
+  // 1. Verify vehicle exists
+  const vehRes = await client.query(
+    `SELECT id, status, current_mileage, location_id FROM fs.vehicles WHERE id = $1`,
+    [vehicleId]
+  );
+  if (vehRes.rowCount === 0) throw new HttpError(404, `Vehicle ${vehicleId} not found`);
+
+  // 2. Prevent concurrent open trips for this vehicle
+  const openTrip = await client.query(
+    `SELECT vehicle_trip_id FROM fs.vehicle_trip WHERE vehicle_id = $1 AND end_time_actual IS NULL`,
+    [vehicleId]
+  );
+  if (openTrip.rowCount > 0) {
+    throw new HttpError(409, 'An open trip is already in progress for this vehicle');
+  }
+
+  // 3. Resolve vendor ID: if none provided, pick first active vendor
+  let resolvedVendorId = vendorId;
+  if (!resolvedVendorId) {
+    const defaultVendor = await client.query(
+      `SELECT vendor_id FROM fs.vendor WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1`
+    );
+    if (defaultVendor.rowCount > 0) resolvedVendorId = defaultVendor.rows[0].vendor_id;
+  }
+
+  // 4. Log starting odometer into fs.vehicle_odometer_log (Rule 10.4-R09)
+  const odoRes = await client.query(
+    `INSERT INTO fs.vehicle_odometer_log (
+       vehicle_id, odometer_value, captured_at, effective_at, quality_flag, is_estimated
+     ) VALUES (
+       $1, $2, $3, $3, 'Good', FALSE
+     ) RETURNING vehicle_odometer_id, odometer_value`,
+    [vehicleId, Math.round(Number(startingOdometer)), departureTime]
+  );
+  const odometerStartId = odoRes.rows[0].vehicle_odometer_id;
+
+  // 5. Insert core VEHICLE_TRIP with trip_type_code = 'service'
+  const tripRes = await client.query(
+    `INSERT INTO fs.vehicle_trip (
+       trip_type_code,
+       vehicle_id,
+       start_time_actual,
+       odometer_start_id,
+       fuel_start_percent,
+       miles_driven,
+       pay_vop_use,
+       condition_snapshot
+     ) VALUES (
+       'service', $1, $2, $3, $4, 0, 'Not Earning', 'service_dispatch'
+     ) RETURNING *`,
+    [
+      vehicleId,
+      departureTime,
+      odometerStartId,
+      Math.round(Number(fuelStartPercent))
+    ]
+  );
+  const trip = tripRes.rows[0];
+
+  // 6. Insert companion fs.vehicle_trip_service (Rule 10.4-R01, 10.4-R03)
+  const serviceRes = await client.query(
+    `INSERT INTO fs.vehicle_trip_service (
+       vehicle_trip_id,
+       vendor_id,
+       service_category_code,
+       service_type_code,
+       service_reason_code,
+       service_notes,
+       created_by_user_id,
+       updated_by_user_id
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $7
+     ) RETURNING *`,
+    [
+      trip.vehicle_trip_id,
+      resolvedVendorId,
+      serviceCategoryCode,
+      serviceTypeCode,
+      serviceReasonCode,
+      serviceNotes,
+      actorUserId
+    ]
+  );
+
+  // 7. Update vehicle status to 'maintenance'
+  await client.query(
+    `UPDATE fs.vehicles SET status = 'maintenance', updated_at = now() WHERE id = $1`,
+    [vehicleId]
+  );
+
+  return {
+    ...trip,
+    service: serviceRes.rows[0],
+    starting_odometer: Math.round(Number(startingOdometer))
+  };
+}
+
+/**
+ * Checkin a Service Trip (Guide 10.4 Step 1 & 2)
+ */
+export async function checkinServiceTrip(client, {
+  tripId,
+  closingOdometer,
+  fuelEndPercent = 100,
+  endTimeActual = null,
+  serviceCost = null,
+  warrantyClaimReference = null,
+  serviceNotes = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+  if (closingOdometer == null || isNaN(closingOdometer) || Number(closingOdometer) < 0) {
+    throw new HttpError(400, 'Valid closingOdometer is required');
+  }
+
+  const returnTime = endTimeActual ? new Date(endTimeActual) : new Date();
+
+  // 1. Fetch service trip
+  const tripRes = await client.query(
+    `SELECT t.*, ts.vendor_id, ts.service_cost
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Service trip ${tripId} not found`);
+  const trip = tripRes.rows[0];
+
+  if (trip.end_time_actual) {
+    throw new HttpError(409, 'Service trip is already closed');
+  }
+
+  // 2. Lookup starting odometer
+  let startOdo = 0;
+  if (trip.odometer_start_id) {
+    const odoStart = await client.query(
+      `SELECT odometer_value FROM fs.vehicle_odometer_log WHERE vehicle_odometer_id = $1`,
+      [trip.odometer_start_id]
+    );
+    if (odoStart.rowCount > 0) startOdo = Number(odoStart.rows[0].odometer_value);
+  }
+
+  const closingOdoNum = Math.round(Number(closingOdometer));
+  if (closingOdoNum < startOdo) {
+    throw new HttpError(400, `Closing odometer (${closingOdoNum}) cannot be less than starting odometer (${startOdo})`);
+  }
+
+  const milesDriven = closingOdoNum - startOdo;
+
+  // 3. Log closing odometer
+  const odoEnd = await client.query(
+    `INSERT INTO fs.vehicle_odometer_log (
+       vehicle_id, odometer_value, captured_at, effective_at, quality_flag, is_estimated
+     ) VALUES (
+       $1, $2, $3, $3, 'Good', FALSE
+     ) RETURNING vehicle_odometer_id`,
+    [trip.vehicle_id, closingOdoNum, returnTime]
+  );
+  const odometerEndId = odoEnd.rows[0].vehicle_odometer_id;
+
+  // 4. Update core VEHICLE_TRIP (Miles logged, NO member points/allowance touched)
+  await client.query(
+    `UPDATE fs.vehicle_trip
+        SET end_time_actual = $1,
+            odometer_end_id = $2,
+            fuel_end_percent = $3,
+            miles_driven = $4,
+            updated_at = now()
+      WHERE vehicle_trip_id = $5`,
+    [returnTime, odometerEndId, Math.round(Number(fuelEndPercent)), milesDriven, tripId]
+  );
+
+  // 5. Update VEHICLE_TRIP_SERVICE details
+  await client.query(
+    `UPDATE fs.vehicle_trip_service
+        SET service_cost = COALESCE($1, service_cost),
+            warranty_claim_reference = COALESCE($2, warranty_claim_reference),
+            service_notes = CASE 
+              WHEN $3::text IS NOT NULL THEN COALESCE(service_notes || E'\n', '') || $3::text 
+              ELSE service_notes 
+            END,
+            updated_at = now(),
+            updated_by_user_id = $4
+      WHERE vehicle_trip_id = $5`,
+    [
+      serviceCost != null ? Number(serviceCost) : null,
+      warrantyClaimReference || null,
+      serviceNotes || null,
+      actorUserId,
+      tripId
+    ]
+  );
+
+  // 6. Return vehicle to 'available' status with updated mileage
+  await client.query(
+    `UPDATE fs.vehicles
+        SET status = 'available',
+            current_mileage = $1,
+            updated_at = now()
+      WHERE id = $2`,
+    [closingOdoNum, trip.vehicle_id]
+  );
+
+  // Fetch updated service trip details
+  const updatedRes = await client.query(
+    `SELECT t.*, ts.*
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  return {
+    ...updatedRes.rows[0],
+    starting_odometer: startOdo,
+    closing_odometer: closingOdoNum,
+    miles_driven: milesDriven
+  };
+}
+
+/**
+ * Record/Update Service Trip Cost and Split/Partner Billing (Guide 10.4 Steps 2 & 3)
+ */
+export async function updateServiceTripCost(client, {
+  tripId,
+  serviceCost = null,
+  warrantyClaimReference = null,
+  billedMemberId = null,
+  billedVehiclePartnerId = null,
+  billedAmount = null,
+  serviceNotes = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // ENFORCE RULE 10.4-R07: Never bill both a member and a vehicle partner
+  if (billedMemberId && billedVehiclePartnerId) {
+    throw new HttpError(400, 'Rule 10.4-R07 Violation: A cost is never billed to both a member and a vehicle partner.');
+  }
+
+  // 1. Fetch service trip
+  const tripRes = await client.query(
+    `SELECT t.vehicle_id, ts.*
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Service trip ${tripId} not found`);
+  const serviceTrip = tripRes.rows[0];
+
+  const costNum = serviceCost != null ? Number(serviceCost) : serviceTrip.service_cost;
+  const billedNum = billedAmount != null ? Number(billedAmount) : (billedMemberId || billedVehiclePartnerId ? costNum : null);
+
+  // 2. Update fs.vehicle_trip_service
+  await client.query(
+    `UPDATE fs.vehicle_trip_service
+        SET service_cost = COALESCE($1, service_cost),
+            warranty_claim_reference = COALESCE($2, warranty_claim_reference),
+            billed_member_id = $3,
+            billed_vehicle_partner_id = $4,
+            billed_amount = $5,
+            service_notes = CASE 
+              WHEN $6::text IS NOT NULL THEN COALESCE(service_notes || E'\n', '') || $6::text 
+              ELSE service_notes 
+            END,
+            updated_at = now(),
+            updated_by_user_id = $7
+      WHERE vehicle_trip_id = $8`,
+    [
+      costNum,
+      warrantyClaimReference || null,
+      billedMemberId || null,
+      billedVehiclePartnerId || null,
+      billedNum,
+      serviceNotes || null,
+      actorUserId,
+      tripId
+    ]
+  );
+
+  let raisedCharge = null;
+
+  // 3. If billed to member, raise member charge in fs.member_charge (Guide 10.4 Step 3.2)
+  if (billedMemberId) {
+    await client.query('SAVEPOINT sp_service_charge');
+    try {
+      const chargeRes = await client.query(
+        `INSERT INTO fs.member_charge (
+           member_id,
+           vehicle_id,
+           service_trip_id,
+           charge_type_code,
+           charge_style,
+           charge_amount,
+           description,
+           payment_status,
+           created_by_user_id
+         ) VALUES (
+           (SELECT member_id FROM fs.member WHERE member_id = $1),
+           (SELECT vehicle_id FROM fs.vehicle WHERE vehicle_id = $2),
+           $3,
+           'DAMAGE',
+           'DEBIT'::fs.member_charge_charge_style_enum,
+           $4,
+           $5,
+           'PENDING'::fs.member_charge_payment_status_enum,
+           $6
+         ) RETURNING member_charge_id, charge_amount, description, payment_status`,
+        [
+          billedMemberId,
+          serviceTrip.vehicle_id,
+          tripId,
+          billedNum,
+          `Service / Repair Recharge for Trip ${tripId.slice(0, 8)}`,
+          actorUserId
+        ]
+      );
+      raisedCharge = chargeRes.rows[0];
+      await client.query('RELEASE SAVEPOINT sp_service_charge');
+    } catch (_err) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_service_charge').catch(() => {});
+    }
+  }
+
+  // 4. If billed to vehicle partner, log entry in fs.vop_payout_log (Guide 10.4 Step 3.3)
+  if (billedVehiclePartnerId) {
+    await client.query('SAVEPOINT sp_vop_log');
+    try {
+      await client.query(
+        `INSERT INTO fs.vop_payout_log (
+           vehicle_id,
+           vehicle_partner_id,
+           vehicle_trip_id,
+           source_table,
+           source_record_id,
+           entry_type,
+           entry_direction,
+           entry_value,
+           description,
+           processed_flag,
+           entry_date,
+           created_by_user_id
+         ) VALUES (
+           $1, $2, $3, 'fs.vehicle_trip_service', $3,
+           'VOP Service'::fs.vop_payout_log_entry_type_enum,
+           'Charge'::fs.vop_payout_log_entry_direction_enum,
+           $4, $5, FALSE, CURRENT_DATE, $6
+         )`,
+        [
+          serviceTrip.vehicle_id,
+          billedVehiclePartnerId,
+          tripId,
+          billedNum,
+          `Service/maintenance expense recharged to partner for trip ${tripId.slice(0, 8)}`,
+          actorUserId
+        ]
+      );
+      await client.query('RELEASE SAVEPOINT sp_vop_log');
+    } catch (_err) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_vop_log').catch(() => {});
+    }
+  }
+
+  const updatedService = await client.query(
+    `SELECT t.*, ts.*, v.license_plate, vm.model_name
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+       LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  return {
+    ...updatedService.rows[0],
+    raised_member_charge: raisedCharge
+  };
+}
+
+/**
+ * List Service Trips (Guide 10.4)
+ */
+export async function listServiceTrips(client, {
+  vehicleId = null,
+  vendorId = null,
+  status = null,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = ["t.trip_type_code = 'service'"];
+  const params = [];
+  let paramIdx = 1;
+
+  if (vehicleId) {
+    conditions.push(`t.vehicle_id = $${paramIdx++}`);
+    params.push(vehicleId);
+  }
+  if (vendorId) {
+    conditions.push(`ts.vendor_id = $${paramIdx++}`);
+    params.push(vendorId);
+  }
+  if (status === 'open') {
+    conditions.push('t.end_time_actual IS NULL');
+  } else if (status === 'completed') {
+    conditions.push('t.end_time_actual IS NOT NULL');
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+  params.push(Math.min(100, Math.max(1, Number(limit))));
+  const limitIdx = paramIdx++;
+  params.push(Math.max(0, Number(offset)));
+  const offsetIdx = paramIdx++;
+
+  const res = await client.query(
+    `SELECT t.*,
+            ts.vendor_id,
+            vdr.name AS vendor_name,
+            ts.service_category_code,
+            ts.service_type_code,
+            ts.service_reason_code,
+            ts.service_cost,
+            ts.billed_member_id,
+            ts.billed_vehicle_partner_id,
+            ts.billed_amount,
+            ts.warranty_claim_reference,
+            ts.service_notes,
+            v.license_plate,
+            vm.model_name AS vehicle_model
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.vendor vdr ON vdr.vendor_id = ts.vendor_id
+       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+       LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+      ${whereClause}
+      ORDER BY t.start_time_actual DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    params
+  );
+
+  return {
+    service_trips: res.rows,
+    count: res.rowCount
+  };
+}
+
 
 ```
 
@@ -37847,6 +39794,224 @@ COMMIT;
 
 ---
 
+## freedom_supercars_complete_codebase\api\db\migrations\034_guide_10_stories_service_tolls.sql
+
+**File Path**: `freedom_supercars_complete_codebase\api\db\migrations\034_guide_10_stories_service_tolls.sql` | **Size**: 10,841 bytes
+
+```sql
+-- =============================================================================
+-- Migration 034: Guide 10.3 (Trip Stories), Guide 10.4 (Service Trips),
+-- and Guide 10.5 (Toll Transactions)
+-- =============================================================================
+
+BEGIN;
+
+SET search_path TO fs, public;
+
+-- -----------------------------------------------------------------------------
+-- 1. Member Charge Types (Guide 10.4 & 10.5)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.member_charge_type (charge_type_code, charge_type_name, charge_description, sort_order, is_active)
+VALUES
+  ('TOLL',     'Toll Charges',         'Highway, expressway and bridge tolls incurred during trip', 6, TRUE),
+  ('SERVICE',  'Service & Maintenance', 'Vehicle service, maintenance, or repair recharge',         7, TRUE)
+ON CONFLICT (charge_type_code) DO UPDATE
+SET charge_type_name = EXCLUDED.charge_type_name,
+    charge_description = EXCLUDED.charge_description,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 2. Toll Authorities (Guide 10.5)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.toll_authority_select (authority_code, authority_name, sort_order, is_active)
+VALUES
+  ('HCTRA',   'Harris County Toll Road Authority (EZ TAG)',         1,  TRUE),
+  ('NTTA',    'North Texas Tollway Authority (TollTag)',            2,  TRUE),
+  ('TxTag',   'Texas Department of Transportation (TxTag)',         3,  TRUE),
+  ('SunPass', 'Florida Department of Transportation (SunPass)',     4,  TRUE),
+  ('E-ZPass', 'E-ZPass Interagency Group',                         5,  TRUE),
+  ('K-Tag',   'Kansas Turnpike Authority (K-TAG)',                  6,  TRUE),
+  ('Pikepass','Oklahoma Turnpike Authority (Pikepass)',             7,  TRUE),
+  ('FasTrak', 'California FasTrak',                                 8,  TRUE),
+  ('OTHER',   'Other Toll Authority / Out-of-Network',              99, TRUE)
+ON CONFLICT (authority_code) DO UPDATE
+SET authority_name = EXCLUDED.authority_name,
+    sort_order = EXCLUDED.sort_order,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 3. Service Categories, Types & Reasons (Guide 10.4)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.service_category (service_category_code, service_category_name, description, is_active, sort_order)
+VALUES
+  ('maintenance', 'Routine Maintenance',          'Regular scheduled preventive servicing',    TRUE, 1),
+  ('repair',      'Mechanical / Body Repair',     'Mechanical, structural, or body repair',     TRUE, 2),
+  ('inspection',  'Safety & Compliance Check',    'State, pre-track, or safety inspections',   TRUE, 3),
+  ('detailing',   'Detailing & Preservation',     'Paint correction, PPF, ceramic detailing',  TRUE, 4),
+  ('recall',      'Manufacturer Recall',          'OEM safety bulletin or recall campaign',    TRUE, 5)
+ON CONFLICT (service_category_code) DO UPDATE
+SET service_category_name = EXCLUDED.service_category_name,
+    description = EXCLUDED.description,
+    is_active = TRUE;
+
+INSERT INTO fs.vehicle_service_type (service_type_code, service_category_code, service_type_name, description, is_active, sort_order)
+VALUES
+  ('scheduled',   'maintenance', 'Scheduled Maintenance',   'Factory maintenance interval check',   TRUE, 1),
+  ('unscheduled', 'repair',      'Unscheduled Repair',      'Unplanned fix or component repair',     TRUE, 2),
+  ('warranty',    'repair',      'Warranty Claim Service',  'Work covered under OEM/3rd party warranty', TRUE, 3),
+  ('recall',      'recall',      'Safety Recall Service',   'Official manufacturer campaign work',   TRUE, 4),
+  ('inspection',  'inspection',  'Periodic Inspection',     'State safety, emissions, or track tech',TRUE, 5),
+  ('cosmetic',    'detailing',   'Cosmetic Detailing',      'Interior/exterior deep restorative prep', TRUE, 6)
+ON CONFLICT (service_type_code) DO UPDATE
+SET service_type_name = EXCLUDED.service_type_name,
+    service_category_code = EXCLUDED.service_category_code,
+    description = EXCLUDED.description,
+    is_active = TRUE;
+
+INSERT INTO fs.service_reason_select (service_reason_code, name, description, sort_order, is_active)
+VALUES
+  ('oil_change',       'Engine Oil & Filter Service',          'Annual or mileage lubricant change',          1, TRUE),
+  ('brake_service',    'Brake Pads & Rotors Replacement',      'Brake pad or carbon ceramic maintenance',    2, TRUE),
+  ('tire_replacement', 'Tire Mount & High-Speed Balancing',    'Tire replacement due to wear or track use',   3, TRUE),
+  ('damage_repair',    'Curb / Body Damage Remediation',       'Repairs from incident or cosmetic road rash', 4, TRUE),
+  ('electrical',       'Sensor / ECU Diagnostic',              'Electronic sensor and fault remediation',     5, TRUE),
+  ('annual_service',   'Factory Annual Service',               'Comprehensive OEM factory scheduled service', 6, TRUE),
+  ('other',            'Other Specialized Shop Work',          'Miscellaneous authorized service work',       7, TRUE)
+ON CONFLICT (service_reason_code) DO UPDATE
+SET name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 4. Trip Story Prompts (Guide 10.3)
+-- -----------------------------------------------------------------------------
+INSERT INTO fs.member_trip_story_prompt (prompt_code, prompt_text, help_text, sort_order, is_active)
+VALUES
+  ('HIGHLIGHT', 'What was the highlight or defining moment of this drive?', 
+   'Describe the standout moment behind the wheel or during your trip.', 1, TRUE),
+  ('HANDLING',  'How did the vehicle perform and handle on your route?', 
+   'Your impressions of steering response, acceleration, exhaust note, and road manners.', 2, TRUE),
+  ('ROUTE',     'What favorite routes, roads, or destinations did you explore?', 
+   'Scenic byways, hill country loops, coastal roads, or great dining/scenic stops.', 3, TRUE),
+  ('TIPS',      'Any advice, drive modes, or tips for the next member driving this supercar?', 
+   'Cabin features, luggage tips, preferred drive modes, or recommended road settings.', 4, TRUE)
+ON CONFLICT (prompt_code) DO UPDATE
+SET prompt_text = EXCLUDED.prompt_text,
+    help_text = EXCLUDED.help_text,
+    sort_order = EXCLUDED.sort_order,
+    is_active = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 5. Trip Story Schema Adjustments (Guide 10.3)
+-- -----------------------------------------------------------------------------
+-- Add direct cover_photo_url on fs.member_trip_story
+ALTER TABLE fs.member_trip_story ADD COLUMN IF NOT EXISTS cover_photo_url TEXT;
+
+-- Enforce unique constraint for autosave upserts on answers: (member_trip_story_id, member_trip_story_prompt_id)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_member_trip_story_answer_story_prompt 
+  ON fs.member_trip_story_answer (member_trip_story_id, member_trip_story_prompt_id);
+
+-- -----------------------------------------------------------------------------
+-- 6. Toll Deduplication Index (Guide 10.5 Developer Note 2)
+-- -----------------------------------------------------------------------------
+CREATE UNIQUE INDEX IF NOT EXISTS uq_vehicle_toll_transaction_authority_tag_time 
+  ON fs.vehicle_toll_transaction (toll_authority_code, toll_tag, transaction_at);
+
+-- -----------------------------------------------------------------------------
+-- 7. Update canonical fs.trips VIEW with Service Trip Details
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW fs.trips AS
+SELECT
+  t.vehicle_trip_id,
+  t.vehicle_trip_id                         AS id,
+  t.vehicle_reservation_id,
+  t.vehicle_reservation_id                  AS reservation_id,
+  t.vehicle_id,
+  t.trip_type_code,
+  t.start_time_actual,
+  t.end_time_actual,
+  t.odometer_start_id,
+  t.odometer_end_id,
+  t.miles_driven,
+  t.fuel_start_percent,
+  t.fuel_end_percent,
+  t.extra_miles,
+  t.extra_miles_reason,
+  t.pay_vop_use,
+  t.condition_signature_url,
+  t.condition_return_signature_url,
+  t.condition_snapshot,
+  t.condition_return_snapshot,
+  -- Member trip details
+  tm.member_id,
+  tm.member_package_id,
+  tm.branch_id,
+  tm.start_type,
+  tm.return_type,
+  tm.miles_member,
+  tm.miles_member_adjustment,
+  tm.miles_member_adjustment_reason,
+  tm.vehicle_tier_snapshot,
+  tm.weekday_point_value_snapshot,
+  tm.weekend_point_value_snapshot,
+  tm.extra_mile_point_value_snapshot,
+  tm.included_miles_snapshot,
+  tm.overage_miles_snapshot,
+  tm.base_points,
+  tm.extra_mileage_points,
+  tm.total_points,
+  tm.calculation_version,
+  tm.calculation_detail,
+  -- Service trip companion details (Guide 10.4)
+  ts.vendor_id                              AS service_vendor_id,
+  vdr.name                                  AS service_vendor_name,
+  ts.service_category_code,
+  ts.service_type_code,
+  ts.service_reason_code,
+  ts.service_cost,
+  ts.billed_member_id                       AS service_billed_member_id,
+  ts.billed_vehicle_partner_id              AS service_billed_vehicle_partner_id,
+  ts.billed_amount                          AS service_billed_amount,
+  ts.warranty_claim_reference,
+  ts.service_notes,
+  -- Vehicle and reservation metadata
+  vm.model_name                             AS vehicle_model,
+  m.name                                    AS vehicle_make,
+  v.license_plate,
+  r.confirmation_code,
+  t.created_at,
+  t.updated_at
+FROM fs.vehicle_trip t
+LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+LEFT JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+LEFT JOIN fs.vendor vdr ON vdr.vendor_id = ts.vendor_id
+LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+LEFT JOIN fs.manufacturers m ON m.id = vm.manufacturer_id
+LEFT JOIN fs.reservations r ON r.id = t.vehicle_reservation_id;
+
+-- -----------------------------------------------------------------------------
+-- 8. Grant Permissions
+-- -----------------------------------------------------------------------------
+GRANT SELECT ON fs.trips TO PUBLIC;
+GRANT ALL ON fs.member_charge_type TO PUBLIC;
+GRANT ALL ON fs.toll_authority_select TO PUBLIC;
+GRANT ALL ON fs.service_category TO PUBLIC;
+GRANT ALL ON fs.vehicle_service_type TO PUBLIC;
+GRANT ALL ON fs.service_reason_select TO PUBLIC;
+GRANT ALL ON fs.member_trip_story_prompt TO PUBLIC;
+GRANT ALL ON fs.member_trip_story TO PUBLIC;
+GRANT ALL ON fs.member_trip_story_answer TO PUBLIC;
+GRANT ALL ON fs.vehicle_trip_service TO PUBLIC;
+GRANT ALL ON fs.vehicle_toll_transaction TO PUBLIC;
+GRANT ALL ON fs.branch_toll_source TO PUBLIC;
+
+COMMIT;
+
+```
+
+---
+
 ## freedom_supercars_complete_codebase\api\scripts\compile_stage2_schema.py
 
 **File Path**: `freedom_supercars_complete_codebase\api\scripts\compile_stage2_schema.py` | **Size**: 17,295 bytes
@@ -39053,7 +41218,7 @@ export async function closePool() {
 
 ## freedom_supercars_complete_codebase\api\src\index.js
 
-**File Path**: `freedom_supercars_complete_codebase\api\src\index.js` | **Size**: 3,722 bytes
+**File Path**: `freedom_supercars_complete_codebase\api\src\index.js` | **Size**: 4,188 bytes
 
 ```javascript
 import 'express-async-errors';
@@ -39078,6 +41243,9 @@ import { reservationsRouter } from './routes/reservations.js';
 import { conciergeRouter } from './routes/concierge.js';
 import { mpcRouter } from './routes/mpc.js';
 import { vopRouter } from './routes/vop.js';
+import { rateCardsRouter } from './routes/rateCards.js';
+import { tripsRouter } from './routes/trips.js';
+import { tollsRouter } from './routes/tolls.js';
 
 const app = express();
 
@@ -39125,6 +41293,9 @@ app.use('/v1/reservations', reservationsRouter);
 app.use('/v1/concierge', conciergeRouter);
 app.use('/v1/mpc', mpcRouter);
 app.use('/v1/vop', vopRouter);
+app.use('/v1/rate-cards', rateCardsRouter);
+app.use('/v1/trips', tripsRouter);
+app.use('/v1/tolls', tollsRouter);
 
 // Root
 app.get('/', (_req, res) => {
@@ -39143,6 +41314,9 @@ app.get('/', (_req, res) => {
       '/v1/concierge',
       '/v1/mpc',
       '/v1/vop',
+      '/v1/rate-cards',
+      '/v1/trips',
+      '/v1/tolls',
     ],
   });
 });
@@ -46032,9 +48206,165 @@ tiersRouter.get('/', async (_req, res) => {
 
 ---
 
+## freedom_supercars_complete_codebase\api\src\routes\tolls.js
+
+**File Path**: `freedom_supercars_complete_codebase\api\src\routes\tolls.js` | **Size**: 3,939 bytes
+
+```javascript
+import { Router } from 'express';
+import { z } from 'zod';
+import { query, withTransaction } from '../db.js';
+import { HttpError } from '../middleware/errorHandler.js';
+import { optionalAuth, requireAuth } from '../middleware/auth.js';
+import {
+  importTolls,
+  matchTolls,
+  billTripTolls,
+  getUnmatchedTolls,
+  disputeToll,
+  excludeToll
+} from '../services/tolls.js';
+
+export const tollsRouter = Router();
+
+const tollItemSchema = z.object({
+  toll_tag: z.string().min(1),
+  tag: z.string().min(1).optional(),
+  transaction_at: z.string().datetime({ offset: true }).optional(),
+  timestamp: z.string().datetime({ offset: true }).optional(),
+  toll_authority_code: z.string().max(20).default('OTHER').optional(),
+  authority: z.string().max(20).optional(),
+  location: z.string().max(160).optional(),
+  gantry: z.string().max(160).optional(),
+  amount: z.number().positive(),
+  notes: z.string().max(500).optional(),
+});
+
+const importSchema = z.object({
+  batch_id: z.string().max(60).optional(),
+  batchId: z.string().max(60).optional(),
+  source: z.string().max(80).default('import').optional(),
+  tolls: z.array(tollItemSchema).min(1),
+});
+
+const noteSchema = z.object({
+  notes: z.string().max(1000).optional(),
+  reason: z.string().max(1000).optional(),
+});
+
+/**
+ * POST /v1/tolls/import
+ * Batch import of toll authority records with deduplication
+ */
+tollsRouter.post('/import', optionalAuth, async (req, res) => {
+  const data = importSchema.parse(req.body);
+  const batchId = data.batch_id || data.batchId;
+
+  const result = await withTransaction(async (client) => {
+    return await importTolls(client, {
+      batchId,
+      source: data.source || 'import',
+      tolls: data.tolls,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.status(201).json(result);
+});
+
+/**
+ * POST /v1/tolls/match
+ * Matches unmatched tolls against actual trip windows
+ */
+tollsRouter.post('/match', optionalAuth, async (req, res) => {
+  const result = await withTransaction(async (client) => {
+    return await matchTolls(client, {
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+/**
+ * GET /v1/tolls/unmatched
+ * Retrieves unmatched toll queue, ordered oldest first
+ */
+tollsRouter.get('/unmatched', optionalAuth, async (req, res) => {
+  const limit = req.query.limit ? Number(req.query.limit) : 50;
+  const offset = req.query.offset ? Number(req.query.offset) : 0;
+
+  const result = await withTransaction(async (client) => {
+    return await getUnmatchedTolls(client, { limit, offset });
+  });
+
+  res.json(result);
+});
+
+/**
+ * PATCH /v1/tolls/:id/dispute
+ * Marks a toll as Disputed
+ */
+tollsRouter.patch('/:id/dispute', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const body = noteSchema.parse(req.body || {});
+  const notes = body.notes || body.reason;
+
+  const result = await withTransaction(async (client) => {
+    return await disputeToll(client, {
+      tollId: id,
+      notes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ toll: result });
+});
+
+/**
+ * PATCH /v1/tolls/:id/exclude
+ * Marks a toll as Excluded (club decision)
+ */
+tollsRouter.patch('/:id/exclude', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const body = noteSchema.parse(req.body || {});
+  const notes = body.notes || body.reason;
+
+  const result = await withTransaction(async (client) => {
+    return await excludeToll(client, {
+      tollId: id,
+      notes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ toll: result });
+});
+
+/**
+ * POST /v1/tolls/bill/:tripId
+ * Convenience alias for billing tolls on a trip
+ */
+tollsRouter.post('/bill/:tripId', optionalAuth, async (req, res) => {
+  const { tripId } = req.params;
+
+  const result = await withTransaction(async (client) => {
+    return await billTripTolls(client, {
+      tripId,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+```
+
+---
+
 ## freedom_supercars_complete_codebase\api\src\routes\trips.js
 
-**File Path**: `freedom_supercars_complete_codebase\api\src\routes\trips.js` | **Size**: 10,752 bytes
+**File Path**: `freedom_supercars_complete_codebase\api\src\routes\trips.js` | **Size**: 24,872 bytes
 
 ```javascript
 import { Router } from 'express';
@@ -46042,9 +48372,26 @@ import { z } from 'zod';
 import { query, withTransaction } from '../db.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
-import { checkoutTrip, checkinTrip, adjustTripMiles } from '../services/trips.js';
+import {
+  checkoutTrip,
+  checkinTrip,
+  adjustTripMiles,
+  getStoryPrompts,
+  getTripStory,
+  upsertTripStory,
+  saveStoryAnswers,
+  checkoutServiceTrip,
+  checkinServiceTrip,
+  updateServiceTripCost,
+  listServiceTrips,
+} from '../services/trips.js';
+import { billTripTolls } from '../services/tolls.js';
 
 export const tripsRouter = Router();
+
+// =============================================================================
+// SCHEMAS
+// =============================================================================
 
 const checkoutSchema = z.object({
   reservation_id: z.string().uuid().optional(),
@@ -46098,6 +48445,241 @@ const adjustMilesSchema = z.object({
   adjustment_reason: z.string().min(3).max(500).optional(),
   adjustmentReason: z.string().min(3).max(500).optional(),
 });
+
+// Guide 10.3: Trip Stories Schemas
+const storyAnswerItemSchema = z.object({
+  prompt_id: z.string().uuid().optional(),
+  promptId: z.string().uuid().optional(),
+  answer_text: z.string().max(5000).optional(),
+  answerText: z.string().max(5000).optional(),
+  assisted_text: z.string().max(5000).optional(),
+  assistedText: z.string().max(5000).optional(),
+  uses_assisted: z.boolean().default(false).optional(),
+  usesAssisted: z.boolean().default(false).optional(),
+});
+
+const storyUpsertSchema = z.object({
+  story_title: z.string().max(200).optional(),
+  storyTitle: z.string().max(200).optional(),
+  introduction: z.string().max(5000).optional(),
+  cover_document_id: z.string().uuid().optional(),
+  coverDocumentId: z.string().uuid().optional(),
+  cover_photo_url: z.string().url().optional(),
+  coverPhotoUrl: z.string().url().optional(),
+  visibility: z.enum(['private', 'members', 'public']).default('members').optional(),
+  answers: z.array(storyAnswerItemSchema).default([]).optional(),
+});
+
+const storyAnswersBatchSchema = z.object({
+  prompt_id: z.string().uuid().optional(),
+  promptId: z.string().uuid().optional(),
+  answer_text: z.string().max(5000).optional(),
+  answerText: z.string().max(5000).optional(),
+  assisted_text: z.string().max(5000).optional(),
+  assistedText: z.string().max(5000).optional(),
+  uses_assisted: z.boolean().default(false).optional(),
+  usesAssisted: z.boolean().default(false).optional(),
+  answers: z.array(storyAnswerItemSchema).optional(),
+});
+
+// Guide 10.4: Service Trips Schemas
+const serviceCheckoutSchema = z.object({
+  vehicle_id: z.string().uuid().optional(),
+  vehicleId: z.string().uuid().optional(),
+  vendor_id: z.string().uuid().optional(),
+  vendorId: z.string().uuid().optional(),
+  starting_odometer: z.number().nonnegative().optional(),
+  startingOdometer: z.number().nonnegative().optional(),
+  mileage: z.number().nonnegative().optional(),
+  service_category_code: z.string().max(40).default('maintenance').optional(),
+  serviceCategoryCode: z.string().max(40).default('maintenance').optional(),
+  service_type_code: z.string().max(40).default('scheduled').optional(),
+  serviceTypeCode: z.string().max(40).default('scheduled').optional(),
+  service_reason_code: z.string().max(40).default('oil_change').optional(),
+  serviceReasonCode: z.string().max(40).default('oil_change').optional(),
+  service_notes: z.string().max(5000).optional(),
+  serviceNotes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional(),
+  fuel_start_percent: z.number().min(0).max(100).default(100).optional(),
+  fuelStartPercent: z.number().min(0).max(100).default(100).optional(),
+  start_time_actual: z.string().datetime({ offset: true }).optional(),
+  startTimeActual: z.string().datetime({ offset: true }).optional(),
+});
+
+const serviceCheckinSchema = z.object({
+  closing_odometer: z.number().nonnegative().optional(),
+  closingOdometer: z.number().nonnegative().optional(),
+  mileage: z.number().nonnegative().optional(),
+  fuel_end_percent: z.number().min(0).max(100).default(100).optional(),
+  fuelEndPercent: z.number().min(0).max(100).default(100).optional(),
+  end_time_actual: z.string().datetime({ offset: true }).optional(),
+  endTimeActual: z.string().datetime({ offset: true }).optional(),
+  service_cost: z.number().nonnegative().optional(),
+  serviceCost: z.number().nonnegative().optional(),
+  warranty_claim_reference: z.string().max(60).optional(),
+  warrantyClaimReference: z.string().max(60).optional(),
+  service_notes: z.string().max(5000).optional(),
+  serviceNotes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional(),
+});
+
+const serviceCostSchema = z.object({
+  service_cost: z.number().nonnegative().optional(),
+  serviceCost: z.number().nonnegative().optional(),
+  warranty_claim_reference: z.string().max(60).optional(),
+  warrantyClaimReference: z.string().max(60).optional(),
+  billed_member_id: z.string().uuid().optional(),
+  billedMemberId: z.string().uuid().optional(),
+  billed_vehicle_partner_id: z.string().uuid().optional(),
+  billedVehiclePartnerId: z.string().uuid().optional(),
+  billed_amount: z.number().nonnegative().optional(),
+  billedAmount: z.number().nonnegative().optional(),
+  service_notes: z.string().max(5000).optional(),
+  serviceNotes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional(),
+});
+
+// =============================================================================
+// GUIDE 10.3: STORY PROMPTS (MUST BE BEFORE /:id ROUTE)
+// =============================================================================
+
+/**
+ * GET /v1/trips/stories/prompts
+ * Returns active story prompts in sort_order
+ */
+tripsRouter.get('/stories/prompts', optionalAuth, async (req, res) => {
+  const result = await withTransaction(async (client) => {
+    return await getStoryPrompts(client);
+  });
+  res.json({ prompts: result });
+});
+
+// =============================================================================
+// GUIDE 10.4: SERVICE TRIPS (MUST BE BEFORE /:id ROUTE)
+// =============================================================================
+
+/**
+ * POST /v1/trips/service/checkout
+ * Dispatches vehicle on vendor maintenance/repair service trip
+ */
+tripsRouter.post('/service/checkout', optionalAuth, async (req, res) => {
+  const data = serviceCheckoutSchema.parse(req.body);
+  const vehicleId = data.vehicle_id || data.vehicleId;
+  const startingOdometer = data.starting_odometer ?? data.startingOdometer ?? data.mileage;
+  const vendorId = data.vendor_id || data.vendorId || null;
+  const serviceCategoryCode = data.service_category_code || data.serviceCategoryCode || 'maintenance';
+  const serviceTypeCode = data.service_type_code || data.serviceTypeCode || 'scheduled';
+  const serviceReasonCode = data.service_reason_code || data.serviceReasonCode || 'oil_change';
+  const serviceNotes = data.service_notes || data.serviceNotes || data.notes || null;
+  const fuelStartPercent = data.fuel_start_percent ?? data.fuelStartPercent ?? 100;
+  const startTimeActual = data.start_time_actual || data.startTimeActual || null;
+
+  if (!vehicleId) throw new HttpError(400, 'vehicle_id is required');
+  if (startingOdometer == null) throw new HttpError(400, 'starting_odometer is required');
+
+  const result = await withTransaction(async (client) => {
+    return await checkoutServiceTrip(client, {
+      vehicleId,
+      vendorId,
+      startingOdometer,
+      serviceCategoryCode,
+      serviceTypeCode,
+      serviceReasonCode,
+      serviceNotes,
+      fuelStartPercent,
+      startTimeActual,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.status(201).json({ service_trip: result });
+});
+
+/**
+ * GET /v1/trips/service
+ * List service trips
+ */
+tripsRouter.get('/service', optionalAuth, async (req, res) => {
+  const { vehicle_id, vendor_id, status, limit, offset } = req.query;
+
+  const result = await withTransaction(async (client) => {
+    return await listServiceTrips(client, {
+      vehicleId: vehicle_id || null,
+      vendorId: vendor_id || null,
+      status: status || null,
+      limit: limit ? Number(limit) : 50,
+      offset: offset ? Number(offset) : 0,
+    });
+  });
+
+  res.json(result);
+});
+
+/**
+ * POST /v1/trips/service/:id/checkin
+ * Closes service trip, logs closing odometer, isolates service miles from member allowances
+ */
+tripsRouter.post('/service/:id/checkin', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const data = serviceCheckinSchema.parse(req.body);
+  const closingOdometer = data.closing_odometer ?? data.closingOdometer ?? data.mileage;
+  const fuelEndPercent = data.fuel_end_percent ?? data.fuelEndPercent ?? 100;
+  const endTimeActual = data.end_time_actual || data.endTimeActual || null;
+  const serviceCost = data.service_cost ?? data.serviceCost ?? null;
+  const warrantyClaimReference = data.warranty_claim_reference || data.warrantyClaimReference || null;
+  const serviceNotes = data.service_notes || data.serviceNotes || data.notes || null;
+
+  if (closingOdometer == null) throw new HttpError(400, 'closing_odometer is required');
+
+  const result = await withTransaction(async (client) => {
+    return await checkinServiceTrip(client, {
+      tripId: id,
+      closingOdometer,
+      fuelEndPercent,
+      endTimeActual,
+      serviceCost,
+      warrantyClaimReference,
+      serviceNotes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ service_trip: result });
+});
+
+/**
+ * PATCH /v1/trips/service/:id/cost
+ * Records service cost, warranty claim, and handles split/partner billing (Rule 10.4-R07)
+ */
+tripsRouter.patch('/service/:id/cost', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const data = serviceCostSchema.parse(req.body);
+  const serviceCost = data.service_cost ?? data.serviceCost ?? null;
+  const warrantyClaimReference = data.warranty_claim_reference || data.warrantyClaimReference || null;
+  const billedMemberId = data.billed_member_id || data.billedMemberId || null;
+  const billedVehiclePartnerId = data.billed_vehicle_partner_id || data.billedVehiclePartnerId || null;
+  const billedAmount = data.billed_amount ?? data.billedAmount ?? null;
+  const serviceNotes = data.service_notes || data.serviceNotes || data.notes || null;
+
+  const result = await withTransaction(async (client) => {
+    return await updateServiceTripCost(client, {
+      tripId: id,
+      serviceCost,
+      warrantyClaimReference,
+      billedMemberId,
+      billedVehiclePartnerId,
+      billedAmount,
+      serviceNotes,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json({ service_trip: result });
+});
+
+// =============================================================================
+// GUIDE 10.1 & 10.2: MEMBER TRIPS CHECKOUT & CHECKIN
+// =============================================================================
 
 /**
  * POST /v1/trips/checkout
@@ -46195,9 +48777,116 @@ tripsRouter.post('/:id/adjust-miles', optionalAuth, async (req, res) => {
   res.json({ adjustment: result });
 });
 
+// =============================================================================
+// GUIDE 10.3: TRIP STORIES (INDIVIDUAL TRIP)
+// =============================================================================
+
+/**
+ * GET /v1/trips/:id/story
+ * Retrieves the story and prompts/answers for a completed trip
+ */
+tripsRouter.get('/:id/story', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const result = await withTransaction(async (client) => {
+    return await getTripStory(client, {
+      tripId: id,
+      memberId: req.user?.memberId || null,
+      isStaff: req.user?.role === 'staff' || req.user?.role === 'admin',
+    });
+  });
+
+  if (!result) {
+    return res.status(404).json({ message: `No story created yet for trip ${id}`, story: null });
+  }
+
+  res.json({ story: result });
+});
+
+/**
+ * POST /v1/trips/:id/story
+ * Creates or updates the story header and answers for a completed trip
+ */
+tripsRouter.post('/:id/story', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const data = storyUpsertSchema.parse(req.body);
+
+  const result = await withTransaction(async (client) => {
+    return await upsertTripStory(client, {
+      tripId: id,
+      storyTitle: data.story_title || data.storyTitle || null,
+      introduction: data.introduction || null,
+      coverDocumentId: data.cover_document_id || data.coverDocumentId || null,
+      coverPhotoUrl: data.cover_photo_url || data.coverPhotoUrl || null,
+      visibility: data.visibility || 'members',
+      answers: data.answers || [],
+      memberId: req.user?.memberId || null,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.status(201).json({ story: result });
+});
+
+/**
+ * POST /v1/trips/:id/story/answers
+ * Autosaves one or more story answers
+ */
+tripsRouter.post('/:id/story/answers', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+  const body = req.body;
+
+  let answerList = [];
+  if (Array.isArray(body)) {
+    answerList = body;
+  } else if (Array.isArray(body.answers)) {
+    answerList = body.answers;
+  } else if (body.prompt_id || body.promptId) {
+    answerList = [body];
+  } else {
+    throw new HttpError(400, 'answers array or prompt_id answer object is required');
+  }
+
+  const result = await withTransaction(async (client) => {
+    return await saveStoryAnswers(client, {
+      tripId: id,
+      answers: answerList,
+      memberId: req.user?.memberId || null,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+// =============================================================================
+// GUIDE 10.5: TOLL RECHARGING FOR A TRIP
+// =============================================================================
+
+/**
+ * POST /v1/trips/:id/tolls/bill
+ * Recharges all matched tolls on this trip as a single aggregate member charge
+ */
+tripsRouter.post('/:id/tolls/bill', optionalAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const result = await withTransaction(async (client) => {
+    return await billTripTolls(client, {
+      tripId: id,
+      actorUserId: req.user?.userId || null,
+    });
+  });
+
+  res.json(result);
+});
+
+// =============================================================================
+// CORE TRIP RETRIEVAL & LISTING
+// =============================================================================
+
 /**
  * GET /v1/trips/:id
- * Retrieve trip details, companion member trip details, and odometer log entries
+ * Retrieve trip details, companion member/service details, and odometer log entries
  */
 tripsRouter.get('/:id', optionalAuth, async (req, res) => {
   const { id } = req.params;
@@ -46218,6 +48907,13 @@ tripsRouter.get('/:id', optionalAuth, async (req, res) => {
             tm.total_points,
             tm.calculation_version,
             tm.calculation_detail,
+            ts.vendor_id as service_vendor_id,
+            ts.service_category_code,
+            ts.service_type_code,
+            ts.service_reason_code,
+            ts.service_cost,
+            ts.billed_amount as service_billed_amount,
+            ts.warranty_claim_reference,
             vm.model_name as vehicle_model,
             m.name as vehicle_make,
             v.license_plate,
@@ -46226,6 +48922,7 @@ tripsRouter.get('/:id', optionalAuth, async (req, res) => {
             r.member_id
        FROM fs.vehicle_trip t
        LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
        LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
        LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
        LEFT JOIN fs.manufacturers m ON m.id = vm.manufacturer_id
@@ -46261,10 +48958,10 @@ tripsRouter.get('/:id', optionalAuth, async (req, res) => {
 
 /**
  * GET /v1/trips
- * List trips with optional filtering by vehicle, reservation, member, or status
+ * List trips with optional filtering by vehicle, reservation, member, trip_type, or status
  */
 tripsRouter.get('/', optionalAuth, async (req, res) => {
-  const { reservation_id, vehicle_id, member_id, status, limit = 50, offset = 0 } = req.query;
+  const { reservation_id, vehicle_id, member_id, trip_type, status, limit = 50, offset = 0 } = req.query;
 
   const conditions = [];
   const params = [];
@@ -46279,8 +48976,12 @@ tripsRouter.get('/', optionalAuth, async (req, res) => {
     params.push(vehicle_id);
   }
   if (member_id) {
-    conditions.push(`r.member_id = $${paramIdx++}`);
+    conditions.push(`(r.member_id = $${paramIdx} OR tm.member_id = $${paramIdx++})`);
     params.push(member_id);
+  }
+  if (trip_type) {
+    conditions.push(`t.trip_type_code = $${paramIdx++}`);
+    params.push(trip_type);
   }
   if (status === 'open') {
     conditions.push(`t.end_time_actual IS NULL`);
@@ -46304,7 +49005,7 @@ tripsRouter.get('/', optionalAuth, async (req, res) => {
            vm.model_name as vehicle_model,
            m.name as vehicle_make,
            r.confirmation_code,
-           r.member_id
+           COALESCE(tm.member_id, r.member_id) as member_id
       FROM fs.vehicle_trip t
       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
@@ -48100,9 +50801,398 @@ export async function checkAnnualTierCap(ctx, days) {
 
 ---
 
+## freedom_supercars_complete_codebase\api\src\services\tolls.js
+
+**File Path**: `freedom_supercars_complete_codebase\api\src\services\tolls.js` | **Size**: 12,887 bytes
+
+```javascript
+/**
+ * Freedom Supercars - Toll Transactions Service (Guide 10.5)
+ *
+ * Implements:
+ * - Batch import of toll authority files with deduplication on (authority, tag, timestamp)
+ * - Matching of unmatched tolls against actual trip windows (actual times, never reservation times)
+ * - Service trip tolls marked as club cost (matched, no member charge)
+ * - Member trip tolls aggregated into a single member charge at billing time
+ * - Unmatched toll working queue (fleet diagnostic & anomaly detection)
+ * - Toll disputes and exclusions management
+ */
+
+import { HttpError } from '../middleware/errorHandler.js';
+
+/**
+ * Import batch of toll transactions with deduplication (Guide 10.5 Steps 1 & 2)
+ */
+export async function importTolls(client, {
+  batchId = null,
+  source = 'import',
+  tolls = [],
+  actorUserId = null
+}) {
+  if (!Array.isArray(tolls) || tolls.length === 0) {
+    throw new HttpError(400, 'tolls array is required and must not be empty');
+  }
+
+  const effectiveBatchId = batchId || `TOLL-BATCH-${Date.now()}`;
+  let importedCount = 0;
+  let duplicateCount = 0;
+  const importedRecords = [];
+
+  for (const item of tolls) {
+    const tollTag = (item.toll_tag || item.tag || '').trim();
+    const transactionAt = item.transaction_at || item.timestamp;
+    const authorityCode = (item.toll_authority_code || item.authority || 'OTHER').trim();
+    const amount = Number(item.amount);
+    const location = item.location || item.gantry || null;
+    const notes = item.notes || null;
+
+    if (!tollTag) throw new HttpError(400, 'toll_tag is required for every toll');
+    if (!transactionAt) throw new HttpError(400, 'transaction_at is required for every toll');
+    if (isNaN(amount) || amount <= 0) throw new HttpError(400, `Valid positive amount required for toll on tag ${tollTag}`);
+
+    // Resolve vehicle_id from toll_tag or license_plate
+    let vehicleId = null;
+    const vehQuery = await client.query(
+      `SELECT vehicle_id FROM (
+         SELECT vehicle_id FROM fs.vehicle_registration_warranty WHERE LOWER(toll_tag) = LOWER($1) OR LOWER(license_plate) = LOWER($1)
+         UNION
+         SELECT id as vehicle_id FROM fs.vehicles WHERE LOWER(license_plate) = LOWER($1)
+       ) sub LIMIT 1`,
+      [tollTag]
+    );
+
+    if (vehQuery.rowCount > 0) {
+      vehicleId = vehQuery.rows[0].vehicle_id;
+    }
+
+    // Insert with ON CONFLICT DO NOTHING for deduplication (Guide 10.5 Developer Note 2)
+    const insertRes = await client.query(
+      `INSERT INTO fs.vehicle_toll_transaction (
+         vehicle_id,
+         toll_tag,
+         transaction_at,
+         toll_authority_code,
+         location,
+         amount,
+         import_source,
+         import_batch_id,
+         match_status,
+         notes,
+         created_by_user_id
+       ) VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, 
+         'Unmatched'::fs.vehicle_toll_transaction_match_status_enum,
+         $9, $10
+       )
+       ON CONFLICT (toll_authority_code, toll_tag, transaction_at) DO NOTHING
+       RETURNING vehicle_toll_transaction_id, vehicle_id, toll_tag, amount, match_status`,
+      [
+        vehicleId,
+        tollTag,
+        new Date(transactionAt),
+        authorityCode,
+        location,
+        amount,
+        source,
+        effectiveBatchId,
+        notes,
+        actorUserId
+      ]
+    );
+
+    if (insertRes.rowCount > 0) {
+      importedCount++;
+      importedRecords.push(insertRes.rows[0]);
+    } else {
+      duplicateCount++;
+    }
+  }
+
+  return {
+    batch_id: effectiveBatchId,
+    total_submitted: tolls.length,
+    imported_count: importedCount,
+    duplicate_count: duplicateCount,
+    records: importedRecords
+  };
+}
+
+/**
+ * Match Unmatched Tolls against Actual Trip Windows (Guide 10.5 Step 2)
+ *
+ * Match condition:
+ * Vehicle ID matches AND start_time_actual <= transaction_at <= (end_time_actual OR now())
+ */
+export async function matchTolls(client, { actorUserId = null } = {}) {
+  // 1. Fetch all unmatched tolls that have a resolved vehicle_id
+  const unmatchedRes = await client.query(
+    `SELECT vehicle_toll_transaction_id, vehicle_id, transaction_at, amount
+       FROM fs.vehicle_toll_transaction
+      WHERE match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum
+        AND vehicle_id IS NOT NULL`
+  );
+
+  let matchedCount = 0;
+  const matchedList = [];
+
+  for (const toll of unmatchedRes.rows) {
+    // Find matching trip by vehicle and actual trip window
+    const tripMatch = await client.query(
+      `SELECT t.vehicle_trip_id, t.trip_type_code, tm.member_id
+         FROM fs.vehicle_trip t
+         LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+        WHERE t.vehicle_id = $1
+          AND t.start_time_actual <= $2
+          AND ($2 <= COALESCE(t.end_time_actual, now()))
+        ORDER BY t.start_time_actual DESC
+        LIMIT 1`,
+      [toll.vehicle_id, toll.transaction_at]
+    );
+
+    if (tripMatch.rowCount > 0) {
+      const trip = tripMatch.rows[0];
+      await client.query(
+        `UPDATE fs.vehicle_toll_transaction
+            SET vehicle_trip_id = $1,
+                match_status = 'Matched'::fs.vehicle_toll_transaction_match_status_enum,
+                updated_at = now(),
+                updated_by_user_id = $2
+          WHERE vehicle_toll_transaction_id = $3`,
+        [trip.vehicle_trip_id, actorUserId, toll.vehicle_toll_transaction_id]
+      );
+
+      matchedCount++;
+      matchedList.push({
+        toll_id: toll.vehicle_toll_transaction_id,
+        trip_id: trip.vehicle_trip_id,
+        trip_type: trip.trip_type_code,
+        member_id: trip.member_id || null,
+        amount: Number(toll.amount)
+      });
+    }
+  }
+
+  // Get current remaining count
+  const remainingRes = await client.query(
+    `SELECT count(*) FROM fs.vehicle_toll_transaction
+      WHERE match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum`
+  );
+  const remainingCount = parseInt(remainingRes.rows[0].count, 10);
+
+  return {
+    matched_count: matchedCount,
+    remaining_unmatched_count: remainingCount,
+    matched_tolls: matchedList
+  };
+}
+
+/**
+ * Bill All Matched Tolls for a Trip in Aggregate (Guide 10.5 Step 3)
+ *
+ * Captures individually, bills in aggregate:
+ * 1. Sums all Matched tolls for the trip where member_charge_id IS NULL
+ * 2. Excludes Disputed and Excluded tolls
+ * 3. Creates ONE member charge for the sum
+ * 4. Updates all those tolls with member_charge_id pointing at that charge
+ */
+export async function billTripTolls(client, {
+  tripId,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // 1. Fetch trip and member details
+  const tripRes = await client.query(
+    `SELECT t.vehicle_trip_id, t.vehicle_reservation_id, t.vehicle_id, t.trip_type_code,
+            tm.member_id, r.confirmation_code
+       FROM fs.vehicle_trip t
+       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.reservations r ON r.id = t.vehicle_reservation_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) {
+    throw new HttpError(404, `Trip ${tripId} not found`);
+  }
+
+  const trip = tripRes.rows[0];
+
+  // If service or internal trip: tolls are club cost, matched but no member charge (Guide 10.5 Step 2.4)
+  if (trip.trip_type_code === 'service' || trip.trip_type_code === 'internal' || !trip.member_id) {
+    return {
+      billed: false,
+      is_club_cost: true,
+      trip_type: trip.trip_type_code,
+      message: 'Tolls on service or internal trips are absorbed as club costs per Guide 10.5; no member charge posted.'
+    };
+  }
+
+  // 2. Fetch all matched, unbilled tolls for this trip
+  const tollsRes = await client.query(
+    `SELECT vehicle_toll_transaction_id, amount, toll_authority_code, location, transaction_at
+       FROM fs.vehicle_toll_transaction
+      WHERE vehicle_trip_id = $1
+        AND match_status = 'Matched'::fs.vehicle_toll_transaction_match_status_enum
+        AND member_charge_id IS NULL
+      ORDER BY transaction_at ASC`,
+    [tripId]
+  );
+
+  if (tollsRes.rowCount === 0) {
+    return {
+      billed: false,
+      message: `No unbilled matched tolls found for trip ${tripId}`
+    };
+  }
+
+  const tolls = tollsRes.rows;
+  const totalAmount = tolls.reduce((sum, t) => sum + Number(t.amount), 0);
+  const roundedTotal = Math.round(totalAmount * 100) / 100;
+  const tollIds = tolls.map((t) => t.vehicle_toll_transaction_id);
+
+  // 3. Post a single aggregated member charge (Guide 10.5 Step 3.2)
+  const description = `Toll charges for Trip ${trip.confirmation_code || tripId.slice(0, 8)} (${tolls.length} ${tolls.length === 1 ? 'toll' : 'tolls'})`;
+
+  let memberChargeId;
+  const chargeRes = await client.query(
+    `INSERT INTO fs.member_charge (
+       member_id,
+       vehicle_trip_id,
+       reservation_id,
+       vehicle_id,
+       charge_type_code,
+       charge_style,
+       charge_amount,
+       description,
+       payment_status,
+       created_by_user_id
+     ) VALUES (
+       (SELECT member_id FROM fs.member WHERE member_id = $1),
+       $2,
+       (SELECT vehicle_reservation_id FROM fs.vehicle_reservation WHERE vehicle_reservation_id = $3),
+       (SELECT vehicle_id FROM fs.vehicle WHERE vehicle_id = $4),
+       'TOLL',
+       'DEBIT'::fs.member_charge_charge_style_enum,
+       $5,
+       $6,
+       'PENDING'::fs.member_charge_payment_status_enum,
+       $7
+     ) RETURNING member_charge_id, charge_amount, description, payment_status, created_at`,
+    [
+      trip.member_id,
+      tripId,
+      trip.vehicle_reservation_id,
+      trip.vehicle_id,
+      roundedTotal,
+      description,
+      actorUserId
+    ]
+  );
+
+  memberChargeId = chargeRes.rows[0].member_charge_id;
+
+  // 4. Update every toll in this group to point at the one charge (Guide 10.5 Step 3.4)
+  await client.query(
+    `UPDATE fs.vehicle_toll_transaction
+        SET member_charge_id = $1,
+            updated_at = now(),
+            updated_by_user_id = $2
+      WHERE vehicle_toll_transaction_id = ANY($3::uuid[])`,
+    [memberChargeId, actorUserId, tollIds]
+  );
+
+  return {
+    billed: true,
+    member_charge_id: memberChargeId,
+    charge: chargeRes.rows[0],
+    toll_count: tolls.length,
+    total_amount: roundedTotal,
+    toll_ids: tollIds
+  };
+}
+
+/**
+ * Get Unmatched Toll Queue (Guide 10.5 Step 5: Working the Unmatched)
+ */
+export async function getUnmatchedTolls(client, { limit = 50, offset = 0 } = {}) {
+  const res = await client.query(
+    `SELECT t.vehicle_toll_transaction_id as id,
+            t.toll_tag,
+            t.transaction_at,
+            t.toll_authority_code,
+            t.location,
+            t.amount,
+            t.import_source,
+            t.import_batch_id,
+            t.match_status,
+            t.notes,
+            v.id as vehicle_id,
+            v.license_plate,
+            vm.model_name as vehicle_model
+       FROM fs.vehicle_toll_transaction t
+       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+       LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+      WHERE t.match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum
+      ORDER BY t.transaction_at ASC
+      LIMIT $1 OFFSET $2`,
+    [Math.min(100, Math.max(1, limit)), Math.max(0, offset)]
+  );
+
+  const countRes = await client.query(
+    `SELECT count(*) FROM fs.vehicle_toll_transaction
+      WHERE match_status = 'Unmatched'::fs.vehicle_toll_transaction_match_status_enum`
+  );
+
+  return {
+    unmatched_tolls: res.rows,
+    total_unmatched: parseInt(countRes.rows[0].count, 10)
+  };
+}
+
+/**
+ * Mark a Toll as Disputed (Guide 10.5 Step 4)
+ */
+export async function disputeToll(client, { tollId, notes = null, actorUserId = null }) {
+  const res = await client.query(
+    `UPDATE fs.vehicle_toll_transaction
+        SET match_status = 'Disputed'::fs.vehicle_toll_transaction_match_status_enum,
+            notes = CASE WHEN $1::text IS NOT NULL THEN COALESCE(notes || E'\n', '') || $1::text ELSE notes END,
+            updated_at = now(),
+            updated_by_user_id = $2
+      WHERE vehicle_toll_transaction_id = $3
+      RETURNING *`,
+    [notes, actorUserId, tollId]
+  );
+  if (res.rowCount === 0) throw new HttpError(404, `Toll ${tollId} not found`);
+  return res.rows[0];
+}
+
+/**
+ * Mark a Toll as Excluded (Guide 10.5 Step 2.5)
+ */
+export async function excludeToll(client, { tollId, notes = null, actorUserId = null }) {
+  const res = await client.query(
+    `UPDATE fs.vehicle_toll_transaction
+        SET match_status = 'Excluded'::fs.vehicle_toll_transaction_match_status_enum,
+            notes = CASE WHEN $1::text IS NOT NULL THEN COALESCE(notes || E'\n', '') || $1::text ELSE notes END,
+            updated_at = now(),
+            updated_by_user_id = $2
+      WHERE vehicle_toll_transaction_id = $3
+      RETURNING *`,
+    [notes, actorUserId, tollId]
+  );
+  if (res.rowCount === 0) throw new HttpError(404, `Toll ${tollId} not found`);
+  return res.rows[0];
+}
+
+```
+
+---
+
 ## freedom_supercars_complete_codebase\api\src\services\trips.js
 
-**File Path**: `freedom_supercars_complete_codebase\api\src\services\trips.js` | **Size**: 25,619 bytes
+**File Path**: `freedom_supercars_complete_codebase\api\src\services\trips.js` | **Size**: 50,554 bytes
 
 ```javascript
 /**
@@ -48838,6 +51928,810 @@ export async function adjustTripMiles(client, {
     miles_member: newMilesMember
   };
 }
+
+/**
+ * ============================================================================
+ * GUIDE 10.3: TRIP STORIES
+ * ============================================================================
+ */
+
+/**
+ * Retrieve active story prompts ordered by sort_order
+ */
+export async function getStoryPrompts(client) {
+  const res = await client.query(
+    `SELECT member_trip_story_prompt_id AS prompt_id,
+            prompt_code,
+            prompt_text,
+            help_text,
+            sort_order
+       FROM fs.member_trip_story_prompt
+      WHERE is_active = TRUE
+      ORDER BY sort_order ASC, created_at ASC`
+  );
+  return res.rows;
+}
+
+/**
+ * Retrieve the story and answers for a specific trip
+ */
+export async function getTripStory(client, { tripId, memberId = null, isStaff = false }) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  const storyRes = await client.query(
+    `SELECT s.*, 
+            t.vehicle_id, 
+            t.vehicle_reservation_id,
+            t.end_time_actual
+       FROM fs.member_trip_story s
+       JOIN fs.vehicle_trip t ON t.vehicle_trip_id = s.vehicle_trip_id
+      WHERE s.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (storyRes.rowCount === 0) {
+    return null;
+  }
+
+  const story = storyRes.rows[0];
+
+  // Privacy rule: private stories are accessible only by author and staff
+  if (story.visibility === 'private' && !isStaff && memberId && story.member_id !== memberId) {
+    throw new HttpError(403, 'This trip story is private to the author');
+  }
+
+  const answersRes = await client.query(
+    `SELECT a.member_trip_story_answer_id AS answer_id,
+            a.member_trip_story_prompt_id AS prompt_id,
+            p.prompt_code,
+            p.prompt_text,
+            a.answer_text,
+            a.assisted_text,
+            a.assisted_at,
+            a.uses_assisted,
+            a.updated_at
+       FROM fs.member_trip_story_answer a
+       JOIN fs.member_trip_story_prompt p ON p.member_trip_story_prompt_id = a.member_trip_story_prompt_id
+      WHERE a.member_trip_story_id = $1
+      ORDER BY p.sort_order ASC, a.created_at ASC`,
+    [story.member_trip_story_id]
+  );
+
+  return {
+    ...story,
+    answers: answersRes.rows,
+  };
+}
+
+/**
+ * Create or update a trip story header and answers (Guide 10.3)
+ */
+export async function upsertTripStory(client, {
+  tripId,
+  storyTitle = null,
+  introduction = null,
+  coverDocumentId = null,
+  coverPhotoUrl = null,
+  visibility = 'members',
+  answers = [],
+  memberId = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // 1. Verify trip exists and is completed (Guide 10.3 Step 1)
+  const tripRes = await client.query(
+    `SELECT t.vehicle_trip_id, t.vehicle_reservation_id, t.end_time_actual, tm.member_id AS trip_member_id
+       FROM fs.vehicle_trip t
+       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Trip ${tripId} not found`);
+  const trip = tripRes.rows[0];
+
+  if (!trip.end_time_actual) {
+    throw new HttpError(400, 'Trip is not completed yet; stories can only be recorded for closed trips (Guide 10.3 Step 1)');
+  }
+
+  const authorMemberId = memberId || trip.trip_member_id || null;
+  const now = new Date();
+
+  // 2. Check if story already exists (Enforce 1 story per trip)
+  const existingStory = await client.query(
+    `SELECT member_trip_story_id FROM fs.member_trip_story WHERE vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  let storyId;
+  if (existingStory.rowCount > 0) {
+    storyId = existingStory.rows[0].member_trip_story_id;
+    await client.query(
+      `UPDATE fs.member_trip_story
+          SET story_title = COALESCE($1, story_title),
+              introduction = COALESCE($2, introduction),
+              cover_document_id = COALESCE($3, cover_document_id),
+              cover_photo_url = COALESCE($4, cover_photo_url),
+              visibility = COALESCE($5, visibility),
+              last_saved_at = $6,
+              updated_at = $6,
+              updated_by_user_id = $7
+        WHERE member_trip_story_id = $8`,
+      [
+        storyTitle,
+        introduction,
+        coverDocumentId,
+        coverPhotoUrl,
+        visibility,
+        now,
+        actorUserId,
+        storyId
+      ]
+    );
+  } else {
+    const insertStory = await client.query(
+      `INSERT INTO fs.member_trip_story (
+         vehicle_trip_id,
+         member_id,
+         story_title,
+         introduction,
+         cover_document_id,
+         cover_photo_url,
+         visibility,
+         started_at,
+         last_saved_at,
+         created_by_user_id,
+         updated_by_user_id
+       ) VALUES (
+         $1, 
+         (SELECT member_id FROM fs.member WHERE member_id = $2),
+         $3, $4, $5, $6, $7, $8, $8, $9, $9
+       ) RETURNING member_trip_story_id`,
+      [
+        tripId,
+        authorMemberId,
+        storyTitle,
+        introduction,
+        coverDocumentId,
+        coverPhotoUrl,
+        visibility || 'members',
+        now,
+        actorUserId
+      ]
+    );
+    storyId = insertStory.rows[0].member_trip_story_id;
+  }
+
+  // 3. Upsert answers if provided
+  if (Array.isArray(answers) && answers.length > 0) {
+    for (const ans of answers) {
+      const promptId = ans.prompt_id || ans.promptId;
+      if (!promptId) continue;
+
+      await client.query(
+        `INSERT INTO fs.member_trip_story_answer (
+           member_trip_story_id,
+           member_trip_story_prompt_id,
+           answer_text,
+           assisted_text,
+           uses_assisted,
+           created_by_user_id,
+           updated_by_user_id
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $6
+         )
+         ON CONFLICT (member_trip_story_id, member_trip_story_prompt_id) DO UPDATE
+         SET answer_text = COALESCE(EXCLUDED.answer_text, fs.member_trip_story_answer.answer_text),
+             assisted_text = COALESCE(EXCLUDED.assisted_text, fs.member_trip_story_answer.assisted_text),
+             uses_assisted = COALESCE(EXCLUDED.uses_assisted, fs.member_trip_story_answer.uses_assisted),
+             updated_at = now(),
+             updated_by_user_id = EXCLUDED.updated_by_user_id`,
+        [
+          storyId,
+          promptId,
+          ans.answer_text ?? ans.answerText ?? null,
+          ans.assisted_text ?? ans.assistedText ?? null,
+          ans.uses_assisted ?? ans.usesAssisted ?? false,
+          actorUserId
+        ]
+      );
+    }
+  }
+
+  return await getTripStory(client, { tripId, memberId: authorMemberId, isStaff: true });
+}
+
+/**
+ * Autosave individual or batch story answers (Guide 10.3 Step 3)
+ */
+export async function saveStoryAnswers(client, {
+  tripId,
+  answers = [],
+  memberId = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // Verify trip exists and is completed
+  const tripRes = await client.query(
+    `SELECT t.vehicle_trip_id, t.end_time_actual, tm.member_id AS trip_member_id
+       FROM fs.vehicle_trip t
+       LEFT JOIN fs.vehicle_trip_member tm ON tm.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Trip ${tripId} not found`);
+  const trip = tripRes.rows[0];
+
+  if (!trip.end_time_actual) {
+    throw new HttpError(400, 'Trip is not completed yet; stories can only be recorded for closed trips (Guide 10.3)');
+  }
+
+  const authorMemberId = memberId || trip.trip_member_id || null;
+  const now = new Date();
+
+  // Find or create story record
+  let storyId;
+  const existingStory = await client.query(
+    `SELECT member_trip_story_id FROM fs.member_trip_story WHERE vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (existingStory.rowCount > 0) {
+    storyId = existingStory.rows[0].member_trip_story_id;
+  } else {
+    const insertStory = await client.query(
+      `INSERT INTO fs.member_trip_story (
+         vehicle_trip_id,
+         member_id,
+         visibility,
+         started_at,
+         last_saved_at,
+         created_by_user_id,
+         updated_by_user_id
+       ) VALUES (
+         $1, 
+         (SELECT member_id FROM fs.member WHERE member_id = $2),
+         'members', $3, $3, $4, $4
+       ) RETURNING member_trip_story_id`,
+      [tripId, authorMemberId, now, actorUserId]
+    );
+    storyId = insertStory.rows[0].member_trip_story_id;
+  }
+
+  const answerList = Array.isArray(answers) ? answers : [answers];
+  let savedCount = 0;
+
+  for (const ans of answerList) {
+    const promptId = ans.prompt_id || ans.promptId;
+    if (!promptId) continue;
+
+    await client.query(
+      `INSERT INTO fs.member_trip_story_answer (
+         member_trip_story_id,
+         member_trip_story_prompt_id,
+         answer_text,
+         assisted_text,
+         uses_assisted,
+         created_by_user_id,
+         updated_by_user_id
+       ) VALUES (
+         $1, $2, $3, $4, $5, $6, $6
+       )
+       ON CONFLICT (member_trip_story_id, member_trip_story_prompt_id) DO UPDATE
+       SET answer_text = COALESCE(EXCLUDED.answer_text, fs.member_trip_story_answer.answer_text),
+           assisted_text = COALESCE(EXCLUDED.assisted_text, fs.member_trip_story_answer.assisted_text),
+           uses_assisted = COALESCE(EXCLUDED.uses_assisted, fs.member_trip_story_answer.uses_assisted),
+           updated_at = now(),
+           updated_by_user_id = EXCLUDED.updated_by_user_id`,
+      [
+        storyId,
+        promptId,
+        ans.answer_text ?? ans.answerText ?? null,
+        ans.assisted_text ?? ans.assistedText ?? null,
+        ans.uses_assisted ?? ans.usesAssisted ?? false,
+        actorUserId
+      ]
+    );
+    savedCount++;
+  }
+
+  // Stamp last_saved_at on the story
+  await client.query(
+    `UPDATE fs.member_trip_story
+        SET last_saved_at = $1,
+            updated_at = $1,
+            updated_by_user_id = $2
+      WHERE member_trip_story_id = $3`,
+    [now, actorUserId, storyId]
+  );
+
+  return {
+    saved: true,
+    trip_id: tripId,
+    story_id: storyId,
+    answers_saved: savedCount,
+    last_saved_at: now
+  };
+}
+
+/**
+ * ============================================================================
+ * GUIDE 10.4: SERVICE TRIPS
+ * ============================================================================
+ */
+
+/**
+ * Checkout a Service Trip (Guide 10.4 Step 1)
+ */
+export async function checkoutServiceTrip(client, {
+  vehicleId,
+  vendorId = null,
+  startingOdometer,
+  serviceCategoryCode = 'maintenance',
+  serviceTypeCode = 'scheduled',
+  serviceReasonCode = 'oil_change',
+  serviceNotes = null,
+  fuelStartPercent = 100,
+  startTimeActual = null,
+  actorUserId = null
+}) {
+  if (!vehicleId) throw new HttpError(400, 'vehicleId is required');
+  if (startingOdometer == null || isNaN(startingOdometer) || Number(startingOdometer) < 0) {
+    throw new HttpError(400, 'Valid startingOdometer is required');
+  }
+
+  const departureTime = startTimeActual ? new Date(startTimeActual) : new Date();
+
+  // 1. Verify vehicle exists
+  const vehRes = await client.query(
+    `SELECT id, status, current_mileage, location_id FROM fs.vehicles WHERE id = $1`,
+    [vehicleId]
+  );
+  if (vehRes.rowCount === 0) throw new HttpError(404, `Vehicle ${vehicleId} not found`);
+
+  // 2. Prevent concurrent open trips for this vehicle
+  const openTrip = await client.query(
+    `SELECT vehicle_trip_id FROM fs.vehicle_trip WHERE vehicle_id = $1 AND end_time_actual IS NULL`,
+    [vehicleId]
+  );
+  if (openTrip.rowCount > 0) {
+    throw new HttpError(409, 'An open trip is already in progress for this vehicle');
+  }
+
+  // 3. Resolve vendor ID: if none provided, pick first active vendor
+  let resolvedVendorId = vendorId;
+  if (!resolvedVendorId) {
+    const defaultVendor = await client.query(
+      `SELECT vendor_id FROM fs.vendor WHERE is_active = TRUE ORDER BY created_at ASC LIMIT 1`
+    );
+    if (defaultVendor.rowCount > 0) resolvedVendorId = defaultVendor.rows[0].vendor_id;
+  }
+
+  // 4. Log starting odometer into fs.vehicle_odometer_log (Rule 10.4-R09)
+  const odoRes = await client.query(
+    `INSERT INTO fs.vehicle_odometer_log (
+       vehicle_id, odometer_value, captured_at, effective_at, quality_flag, is_estimated
+     ) VALUES (
+       $1, $2, $3, $3, 'Good', FALSE
+     ) RETURNING vehicle_odometer_id, odometer_value`,
+    [vehicleId, Math.round(Number(startingOdometer)), departureTime]
+  );
+  const odometerStartId = odoRes.rows[0].vehicle_odometer_id;
+
+  // 5. Insert core VEHICLE_TRIP with trip_type_code = 'service'
+  const tripRes = await client.query(
+    `INSERT INTO fs.vehicle_trip (
+       trip_type_code,
+       vehicle_id,
+       start_time_actual,
+       odometer_start_id,
+       fuel_start_percent,
+       miles_driven,
+       pay_vop_use,
+       condition_snapshot
+     ) VALUES (
+       'service', $1, $2, $3, $4, 0, 'Not Earning', 'service_dispatch'
+     ) RETURNING *`,
+    [
+      vehicleId,
+      departureTime,
+      odometerStartId,
+      Math.round(Number(fuelStartPercent))
+    ]
+  );
+  const trip = tripRes.rows[0];
+
+  // 6. Insert companion fs.vehicle_trip_service (Rule 10.4-R01, 10.4-R03)
+  const serviceRes = await client.query(
+    `INSERT INTO fs.vehicle_trip_service (
+       vehicle_trip_id,
+       vendor_id,
+       service_category_code,
+       service_type_code,
+       service_reason_code,
+       service_notes,
+       created_by_user_id,
+       updated_by_user_id
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $7
+     ) RETURNING *`,
+    [
+      trip.vehicle_trip_id,
+      resolvedVendorId,
+      serviceCategoryCode,
+      serviceTypeCode,
+      serviceReasonCode,
+      serviceNotes,
+      actorUserId
+    ]
+  );
+
+  // 7. Update vehicle status to 'maintenance'
+  await client.query(
+    `UPDATE fs.vehicles SET status = 'maintenance', updated_at = now() WHERE id = $1`,
+    [vehicleId]
+  );
+
+  return {
+    ...trip,
+    service: serviceRes.rows[0],
+    starting_odometer: Math.round(Number(startingOdometer))
+  };
+}
+
+/**
+ * Checkin a Service Trip (Guide 10.4 Step 1 & 2)
+ */
+export async function checkinServiceTrip(client, {
+  tripId,
+  closingOdometer,
+  fuelEndPercent = 100,
+  endTimeActual = null,
+  serviceCost = null,
+  warrantyClaimReference = null,
+  serviceNotes = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+  if (closingOdometer == null || isNaN(closingOdometer) || Number(closingOdometer) < 0) {
+    throw new HttpError(400, 'Valid closingOdometer is required');
+  }
+
+  const returnTime = endTimeActual ? new Date(endTimeActual) : new Date();
+
+  // 1. Fetch service trip
+  const tripRes = await client.query(
+    `SELECT t.*, ts.vendor_id, ts.service_cost
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Service trip ${tripId} not found`);
+  const trip = tripRes.rows[0];
+
+  if (trip.end_time_actual) {
+    throw new HttpError(409, 'Service trip is already closed');
+  }
+
+  // 2. Lookup starting odometer
+  let startOdo = 0;
+  if (trip.odometer_start_id) {
+    const odoStart = await client.query(
+      `SELECT odometer_value FROM fs.vehicle_odometer_log WHERE vehicle_odometer_id = $1`,
+      [trip.odometer_start_id]
+    );
+    if (odoStart.rowCount > 0) startOdo = Number(odoStart.rows[0].odometer_value);
+  }
+
+  const closingOdoNum = Math.round(Number(closingOdometer));
+  if (closingOdoNum < startOdo) {
+    throw new HttpError(400, `Closing odometer (${closingOdoNum}) cannot be less than starting odometer (${startOdo})`);
+  }
+
+  const milesDriven = closingOdoNum - startOdo;
+
+  // 3. Log closing odometer
+  const odoEnd = await client.query(
+    `INSERT INTO fs.vehicle_odometer_log (
+       vehicle_id, odometer_value, captured_at, effective_at, quality_flag, is_estimated
+     ) VALUES (
+       $1, $2, $3, $3, 'Good', FALSE
+     ) RETURNING vehicle_odometer_id`,
+    [trip.vehicle_id, closingOdoNum, returnTime]
+  );
+  const odometerEndId = odoEnd.rows[0].vehicle_odometer_id;
+
+  // 4. Update core VEHICLE_TRIP (Miles logged, NO member points/allowance touched)
+  await client.query(
+    `UPDATE fs.vehicle_trip
+        SET end_time_actual = $1,
+            odometer_end_id = $2,
+            fuel_end_percent = $3,
+            miles_driven = $4,
+            updated_at = now()
+      WHERE vehicle_trip_id = $5`,
+    [returnTime, odometerEndId, Math.round(Number(fuelEndPercent)), milesDriven, tripId]
+  );
+
+  // 5. Update VEHICLE_TRIP_SERVICE details
+  await client.query(
+    `UPDATE fs.vehicle_trip_service
+        SET service_cost = COALESCE($1, service_cost),
+            warranty_claim_reference = COALESCE($2, warranty_claim_reference),
+            service_notes = CASE 
+              WHEN $3::text IS NOT NULL THEN COALESCE(service_notes || E'\n', '') || $3::text 
+              ELSE service_notes 
+            END,
+            updated_at = now(),
+            updated_by_user_id = $4
+      WHERE vehicle_trip_id = $5`,
+    [
+      serviceCost != null ? Number(serviceCost) : null,
+      warrantyClaimReference || null,
+      serviceNotes || null,
+      actorUserId,
+      tripId
+    ]
+  );
+
+  // 6. Return vehicle to 'available' status with updated mileage
+  await client.query(
+    `UPDATE fs.vehicles
+        SET status = 'available',
+            current_mileage = $1,
+            updated_at = now()
+      WHERE id = $2`,
+    [closingOdoNum, trip.vehicle_id]
+  );
+
+  // Fetch updated service trip details
+  const updatedRes = await client.query(
+    `SELECT t.*, ts.*
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  return {
+    ...updatedRes.rows[0],
+    starting_odometer: startOdo,
+    closing_odometer: closingOdoNum,
+    miles_driven: milesDriven
+  };
+}
+
+/**
+ * Record/Update Service Trip Cost and Split/Partner Billing (Guide 10.4 Steps 2 & 3)
+ */
+export async function updateServiceTripCost(client, {
+  tripId,
+  serviceCost = null,
+  warrantyClaimReference = null,
+  billedMemberId = null,
+  billedVehiclePartnerId = null,
+  billedAmount = null,
+  serviceNotes = null,
+  actorUserId = null
+}) {
+  if (!tripId) throw new HttpError(400, 'tripId is required');
+
+  // ENFORCE RULE 10.4-R07: Never bill both a member and a vehicle partner
+  if (billedMemberId && billedVehiclePartnerId) {
+    throw new HttpError(400, 'Rule 10.4-R07 Violation: A cost is never billed to both a member and a vehicle partner.');
+  }
+
+  // 1. Fetch service trip
+  const tripRes = await client.query(
+    `SELECT t.vehicle_id, ts.*
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  if (tripRes.rowCount === 0) throw new HttpError(404, `Service trip ${tripId} not found`);
+  const serviceTrip = tripRes.rows[0];
+
+  const costNum = serviceCost != null ? Number(serviceCost) : serviceTrip.service_cost;
+  const billedNum = billedAmount != null ? Number(billedAmount) : (billedMemberId || billedVehiclePartnerId ? costNum : null);
+
+  // 2. Update fs.vehicle_trip_service
+  await client.query(
+    `UPDATE fs.vehicle_trip_service
+        SET service_cost = COALESCE($1, service_cost),
+            warranty_claim_reference = COALESCE($2, warranty_claim_reference),
+            billed_member_id = $3,
+            billed_vehicle_partner_id = $4,
+            billed_amount = $5,
+            service_notes = CASE 
+              WHEN $6::text IS NOT NULL THEN COALESCE(service_notes || E'\n', '') || $6::text 
+              ELSE service_notes 
+            END,
+            updated_at = now(),
+            updated_by_user_id = $7
+      WHERE vehicle_trip_id = $8`,
+    [
+      costNum,
+      warrantyClaimReference || null,
+      billedMemberId || null,
+      billedVehiclePartnerId || null,
+      billedNum,
+      serviceNotes || null,
+      actorUserId,
+      tripId
+    ]
+  );
+
+  let raisedCharge = null;
+
+  // 3. If billed to member, raise member charge in fs.member_charge (Guide 10.4 Step 3.2)
+  if (billedMemberId) {
+    await client.query('SAVEPOINT sp_service_charge');
+    try {
+      const chargeRes = await client.query(
+        `INSERT INTO fs.member_charge (
+           member_id,
+           vehicle_id,
+           service_trip_id,
+           charge_type_code,
+           charge_style,
+           charge_amount,
+           description,
+           payment_status,
+           created_by_user_id
+         ) VALUES (
+           (SELECT member_id FROM fs.member WHERE member_id = $1),
+           (SELECT vehicle_id FROM fs.vehicle WHERE vehicle_id = $2),
+           $3,
+           'DAMAGE',
+           'DEBIT'::fs.member_charge_charge_style_enum,
+           $4,
+           $5,
+           'PENDING'::fs.member_charge_payment_status_enum,
+           $6
+         ) RETURNING member_charge_id, charge_amount, description, payment_status`,
+        [
+          billedMemberId,
+          serviceTrip.vehicle_id,
+          tripId,
+          billedNum,
+          `Service / Repair Recharge for Trip ${tripId.slice(0, 8)}`,
+          actorUserId
+        ]
+      );
+      raisedCharge = chargeRes.rows[0];
+      await client.query('RELEASE SAVEPOINT sp_service_charge');
+    } catch (_err) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_service_charge').catch(() => {});
+    }
+  }
+
+  // 4. If billed to vehicle partner, log entry in fs.vop_payout_log (Guide 10.4 Step 3.3)
+  if (billedVehiclePartnerId) {
+    await client.query('SAVEPOINT sp_vop_log');
+    try {
+      await client.query(
+        `INSERT INTO fs.vop_payout_log (
+           vehicle_id,
+           vehicle_partner_id,
+           vehicle_trip_id,
+           source_table,
+           source_record_id,
+           entry_type,
+           entry_direction,
+           entry_value,
+           description,
+           processed_flag,
+           entry_date,
+           created_by_user_id
+         ) VALUES (
+           $1, $2, $3, 'fs.vehicle_trip_service', $3,
+           'VOP Service'::fs.vop_payout_log_entry_type_enum,
+           'Charge'::fs.vop_payout_log_entry_direction_enum,
+           $4, $5, FALSE, CURRENT_DATE, $6
+         )`,
+        [
+          serviceTrip.vehicle_id,
+          billedVehiclePartnerId,
+          tripId,
+          billedNum,
+          `Service/maintenance expense recharged to partner for trip ${tripId.slice(0, 8)}`,
+          actorUserId
+        ]
+      );
+      await client.query('RELEASE SAVEPOINT sp_vop_log');
+    } catch (_err) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_vop_log').catch(() => {});
+    }
+  }
+
+  const updatedService = await client.query(
+    `SELECT t.*, ts.*, v.license_plate, vm.model_name
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+       LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+      WHERE t.vehicle_trip_id = $1`,
+    [tripId]
+  );
+
+  return {
+    ...updatedService.rows[0],
+    raised_member_charge: raisedCharge
+  };
+}
+
+/**
+ * List Service Trips (Guide 10.4)
+ */
+export async function listServiceTrips(client, {
+  vehicleId = null,
+  vendorId = null,
+  status = null,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = ["t.trip_type_code = 'service'"];
+  const params = [];
+  let paramIdx = 1;
+
+  if (vehicleId) {
+    conditions.push(`t.vehicle_id = $${paramIdx++}`);
+    params.push(vehicleId);
+  }
+  if (vendorId) {
+    conditions.push(`ts.vendor_id = $${paramIdx++}`);
+    params.push(vendorId);
+  }
+  if (status === 'open') {
+    conditions.push('t.end_time_actual IS NULL');
+  } else if (status === 'completed') {
+    conditions.push('t.end_time_actual IS NOT NULL');
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+  params.push(Math.min(100, Math.max(1, Number(limit))));
+  const limitIdx = paramIdx++;
+  params.push(Math.max(0, Number(offset)));
+  const offsetIdx = paramIdx++;
+
+  const res = await client.query(
+    `SELECT t.*,
+            ts.vendor_id,
+            vdr.name AS vendor_name,
+            ts.service_category_code,
+            ts.service_type_code,
+            ts.service_reason_code,
+            ts.service_cost,
+            ts.billed_member_id,
+            ts.billed_vehicle_partner_id,
+            ts.billed_amount,
+            ts.warranty_claim_reference,
+            ts.service_notes,
+            v.license_plate,
+            vm.model_name AS vehicle_model
+       FROM fs.vehicle_trip t
+       JOIN fs.vehicle_trip_service ts ON ts.vehicle_trip_id = t.vehicle_trip_id
+       LEFT JOIN fs.vendor vdr ON vdr.vendor_id = ts.vendor_id
+       LEFT JOIN fs.vehicles v ON v.id = t.vehicle_id
+       LEFT JOIN fs.vehicle_models vm ON vm.id = v.model_id
+      ${whereClause}
+      ORDER BY t.start_time_actual DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    params
+  );
+
+  return {
+    service_trips: res.rows,
+    count: res.rowCount
+  };
+}
+
 
 ```
 

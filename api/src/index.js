@@ -22,6 +22,7 @@ import { mpcRouter } from './routes/mpc.js';
 import { vopRouter } from './routes/vop.js';
 import { rateCardsRouter } from './routes/rateCards.js';
 import { tripsRouter } from './routes/trips.js';
+import { tollsRouter } from './routes/tolls.js';
 
 const app = express();
 
@@ -71,6 +72,7 @@ app.use('/v1/mpc', mpcRouter);
 app.use('/v1/vop', vopRouter);
 app.use('/v1/rate-cards', rateCardsRouter);
 app.use('/v1/trips', tripsRouter);
+app.use('/v1/tolls', tollsRouter);
 
 // Root
 app.get('/', (_req, res) => {
@@ -91,6 +93,7 @@ app.get('/', (_req, res) => {
       '/v1/vop',
       '/v1/rate-cards',
       '/v1/trips',
+      '/v1/tolls',
     ],
   });
 });
