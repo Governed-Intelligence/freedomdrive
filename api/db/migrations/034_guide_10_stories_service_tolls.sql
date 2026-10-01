@@ -119,6 +119,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_vehicle_toll_transaction_authority_tag_time
 -- -----------------------------------------------------------------------------
 -- 7. Update canonical fs.trips VIEW with Service Trip Details
 -- -----------------------------------------------------------------------------
+DROP VIEW IF EXISTS fs.trips CASCADE;
 CREATE OR REPLACE VIEW fs.trips AS
 SELECT
   t.vehicle_trip_id,
