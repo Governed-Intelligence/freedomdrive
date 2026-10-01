@@ -48,9 +48,7 @@ export async function importTolls(client, {
       `SELECT vehicle_id FROM (
          SELECT vehicle_id FROM fs.vehicle_registration_warranty WHERE LOWER(toll_tag) = LOWER($1) OR LOWER(license_plate) = LOWER($1)
          UNION
-         SELECT id as vehicle_id FROM fs.vehicles WHERE LOWER(license_plate) = LOWER($1) OR LOWER(stock_number) = LOWER($1)
-         UNION
-         SELECT vehicle_id FROM fs.vehicle WHERE LOWER(license_plate) = LOWER($1) OR LOWER(stock_number) = LOWER($1)
+         SELECT id as vehicle_id FROM fs.vehicles WHERE (license_plate IS NOT NULL AND LOWER(license_plate) = LOWER($1)) OR (stock_number IS NOT NULL AND LOWER(stock_number) = LOWER($1))
        ) sub LIMIT 1`,
       [tollTag]
     );
