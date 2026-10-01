@@ -404,12 +404,23 @@ export async function checkinTrip(client, {
   let fuelChargeId = null;
   if (fuelReplenishmentFee > 0) {
     try {
+      await client.query('SAVEPOINT sp_fuel_charge');
       const chargeRes = await client.query(
         `INSERT INTO fs.member_charge (
            member_id, vehicle_trip_id, reservation_id, vehicle_id,
            charge_type_code, charge_style, charge_amount, description, payment_status, created_at, updated_at
          ) VALUES (
-           $1, $2, $3, $4, 'FUEL', 'Dollars', $5, $6, 'Pending', now(), now()
+           (SELECT member_id FROM fs.member WHERE member_id = $1),
+           $2,
+           (SELECT vehicle_reservation_id FROM fs.vehicle_reservation WHERE vehicle_reservation_id = $3),
+           (SELECT vehicle_id FROM fs.vehicle WHERE vehicle_id = $4),
+           'FUEL',
+           'Dollars'::fs.member_charge_charge_style_enum,
+           $5,
+           $6,
+           'Pending'::fs.member_charge_payment_status_enum,
+           now(),
+           now()
          ) RETURNING member_charge_id`,
         [
           trip.member_id,
@@ -423,14 +434,25 @@ export async function checkinTrip(client, {
       if (chargeRes.rowCount > 0) {
         fuelChargeId = chargeRes.rows[0].member_charge_id;
       }
-    } catch (_e) {}
+      await client.query('RELEASE SAVEPOINT sp_fuel_charge');
+    } catch (_e) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_fuel_charge').catch(() => {});
+    }
 
     try {
+      await client.query('SAVEPOINT sp_fuel_payment');
       await client.query(
         `INSERT INTO fs.payments (
            member_id, reservation_id, amount, currency, description, category, status, created_at
          ) VALUES (
-           $1, $2, $3, 'USD', $4, 'fuel', 'pending', now()
+           (SELECT id FROM fs.members WHERE id = $1),
+           (SELECT id FROM fs.reservations WHERE id = $2),
+           $3,
+           'USD',
+           $4,
+           'fuel',
+           'pending'::fs.payment_status,
+           now()
          )`,
         [
           trip.member_id,
@@ -439,30 +461,48 @@ export async function checkinTrip(client, {
           `Fuel replenishment fee for reservation ${trip.confirmation_code || tripId}`
         ]
       );
-    } catch (_e) {}
+      await client.query('RELEASE SAVEPOINT sp_fuel_payment');
+    } catch (_e) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_fuel_payment').catch(() => {});
+    }
   }
 
   // 7. Insert into fs.reservation_pickups_returns for Stage 1 / inspection log compatibility
   if (trip.vehicle_reservation_id) {
     try {
+      await client.query('SAVEPOINT sp_return_inspection');
       await client.query(
         `INSERT INTO fs.reservation_pickups_returns (
            reservation_id, event_type, mileage, fuel_level_pct, condition,
            new_damage, handled_by_staff, member_signature_url, photos_url, notes
-         ) VALUES ($1, 'return', $2, $3, $4, $5, $6, $7, $8, $9)`,
+         ) VALUES (
+           (SELECT id FROM fs.reservations WHERE id = $1),
+           'return',
+           $2,
+           $3,
+           ($4)::fs.vehicle_condition,
+           $5,
+           $6,
+           $7,
+           $8,
+           $9
+         )`,
         [
           trip.vehicle_reservation_id,
-          endOdometer,
+          Math.round(Number(endOdometer)),
           fuelEndPercentVal,
           condition || 'good',
           newDamage || null,
           handledByStaff || null,
           conditionSignature || null,
-          photosUrl || null,
+          photosUrl ? (Array.isArray(photosUrl) ? photosUrl : [photosUrl]) : null,
           notes || null
         ]
       );
-    } catch (_e) {}
+      await client.query('RELEASE SAVEPOINT sp_return_inspection');
+    } catch (_e) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_return_inspection').catch(() => {});
+    }
   }
 
   // 8. Working calculation trace (Guide 10.2-C18, 10.2-C19)
@@ -500,59 +540,36 @@ export async function checkinTrip(client, {
   };
 
   // 9. Update core VEHICLE_TRIP (10.1-C09, 10.1-C10)
-  try {
-    await client.query(
-      `UPDATE fs.vehicle_trip
-          SET end_time_actual = $1,
-              odometer_end_id = $2,
-              miles_driven = $3,
-              fuel_end_percent = $4,
-              extra_miles = $5,
-              extra_miles_reason = $6,
-              condition_return_signature_url = $7,
-              condition_return_snapshot = $8,
-              updated_at = now()
-        WHERE vehicle_trip_id = $9`,
-      [
-        returnTime,
-        odometerEndId,
-        milesDriven,
-        fuelEndPercentVal,
-        Math.round(Number(extraMiles) || 0),
-        extraMiles ? (extraMilesReason === 'Fuel' ? 'Fuel' : 'Delivery') : null,
-        conditionSignature || null,
-        condition || 'good',
-        tripId
-      ]
-    );
-  } catch (_e) {
-    await client.query(
-      `UPDATE fs.vehicle_trip
-          SET end_time_actual = $1,
-              odometer_end_id = $2,
-              miles_driven = $3,
-              fuel_end_percent = $4,
-              extra_miles = $5,
-              extra_miles_reason = $6,
-              updated_at = now()
-        WHERE vehicle_trip_id = $7`,
-      [
-        returnTime,
-        odometerEndId,
-        milesDriven,
-        fuelEndPercentVal,
-        Math.round(Number(extraMiles) || 0),
-        extraMiles ? (extraMilesReason === 'Fuel' ? 'Fuel' : 'Delivery') : null,
-        tripId
-      ]
-    );
-  }
+  await client.query(
+    `UPDATE fs.vehicle_trip
+        SET end_time_actual = $1,
+            odometer_end_id = $2,
+            miles_driven = $3,
+            fuel_end_percent = $4,
+            extra_miles = $5,
+            extra_miles_reason = $6,
+            condition_return_signature_url = $7,
+            condition_return_snapshot = $8,
+            updated_at = now()
+      WHERE vehicle_trip_id = $9`,
+    [
+      returnTime,
+      odometerEndId,
+      milesDriven,
+      fuelEndPercentVal,
+      Math.round(Number(extraMiles) || 0),
+      extraMiles ? (extraMilesReason === 'Fuel' ? 'Fuel' : 'Delivery') : null,
+      conditionSignature || null,
+      condition || 'good',
+      tripId
+    ]
+  );
 
   // 10. Update companion VEHICLE_TRIP_MEMBER (10.2-C01 to 10.2-C20)
   await client.query(
     `UPDATE fs.vehicle_trip_member
         SET end_time_actual = $1,
-            return_type = $2,
+            return_type = ($2)::fs.vehicle_trip_member_return_type_enum,
             miles_member = $3,
             overage_miles_snapshot = $4,
             extra_mileage_points = $5,
@@ -575,20 +592,33 @@ export async function checkinTrip(client, {
 
   // 11. Debit ledger if overage points occurred (Guide 10.2-C14)
   if (extraMileagePoints > 0) {
-    await client.query(
-      `INSERT INTO fs.member_points_ledger (
-         member_id, vehicle_trip_id, reservation_id, points_change, source, description, entry_type, occurred_at
-       ) VALUES (
-         $1, $2, $3, $4, 'Reservation', $5, 'Charge Reservation', now()
-       )`,
-      [
-        trip.member_id,
-        tripId,
-        trip.vehicle_reservation_id,
-        -extraMileagePoints,
-        `Trip settlement: ${overageMiles} overage miles for reservation ${trip.confirmation_code || tripId}`
-      ]
-    );
+    try {
+      await client.query('SAVEPOINT sp_points_ledger');
+      await client.query(
+        `INSERT INTO fs.member_points_ledger (
+           member_id, vehicle_trip_id, reservation_id, points_change, source, description, entry_type, occurred_at
+         ) VALUES (
+           (SELECT member_id FROM fs.member WHERE member_id = $1),
+           $2,
+           (SELECT vehicle_reservation_id FROM fs.vehicle_reservation WHERE vehicle_reservation_id = $3),
+           $4,
+           'Reservation',
+           $5,
+           'Charge Reservation'::fs.member_points_ledger_entry_type_enum,
+           now()
+         )`,
+        [
+          trip.member_id,
+          tripId,
+          trip.vehicle_reservation_id,
+          -extraMileagePoints,
+          `Trip settlement: ${overageMiles} overage miles for reservation ${trip.confirmation_code || tripId}`
+        ]
+      );
+      await client.query('RELEASE SAVEPOINT sp_points_ledger');
+    } catch (_e) {
+      await client.query('ROLLBACK TO SAVEPOINT sp_points_ledger').catch(() => {});
+    }
   }
 
   // 12. Update reservation to completed
